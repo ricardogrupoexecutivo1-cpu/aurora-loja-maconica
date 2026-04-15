@@ -1,7 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BillingInfo,
+  canArchive,
+  canCreate,
+  canDownload,
+  getBilling,
+  getBillingLabel,
+  getBillingMessage,
+  getBillingTone,
+} from "@/lib/billing";
 
 type LancamentoItem = {
   id: number;
@@ -53,6 +63,22 @@ const LANCAMENTOS_INICIAIS: LancamentoItem[] = [
     arquivado: true,
   },
 ];
+
+const BILLING_INICIAL: BillingInfo = {
+  status: "ativo",
+  vencimento: undefined,
+  diasAtraso: 0,
+  linkPagamento: "#",
+  bloquearCriacao: false,
+  bloquearArquivamento: false,
+  bloquearDownload: false,
+  lojaId: "loja-maconica-aurora",
+  lojaNome: "Loja Maçônica Aurora",
+  planoNome: "Plano Institucional",
+  paymentStatus: "pago",
+  graceUntil: undefined,
+  observacoes: "",
+};
 
 function SummaryCard({
   title,
@@ -230,7 +256,7 @@ function Field({
   );
 }
 
-function InputStyle() {
+function inputStyleBase() {
   return {
     width: "100%",
     borderRadius: 16,
@@ -248,22 +274,26 @@ function ActionButton({
   label,
   onClick,
   variant = "primary",
+  disabled = false,
 }: {
   label: string;
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
 }) {
-  const background =
-    variant === "primary"
+  const background = disabled
+    ? "#cbd5e1"
+    : variant === "primary"
       ? "#065f46"
       : variant === "danger"
         ? "#7f1d1d"
         : "#ffffff";
 
-  const color = variant === "secondary" ? "#0f172a" : "#ffffff";
+  const color = disabled ? "#64748b" : variant === "secondary" ? "#0f172a" : "#ffffff";
 
-  const border =
-    variant === "secondary"
+  const border = disabled
+    ? "1px solid #cbd5e1"
+    : variant === "secondary"
       ? "1px solid #dbe4ea"
       : variant === "danger"
         ? "1px solid #991b1b"
@@ -272,7 +302,8 @@ function ActionButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       style={{
         appearance: "none",
         border,
@@ -282,7 +313,8 @@ function ActionButton({
         padding: "12px 16px",
         fontWeight: 800,
         fontSize: 14,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.9 : 1,
         boxShadow:
           variant === "secondary"
             ? "0 10px 24px rgba(15, 23, 42, 0.04)"
@@ -297,9 +329,11 @@ function ActionButton({
 function LancamentoCard({
   item,
   onArquivar,
+  podeArquivar,
 }: {
   item: LancamentoItem;
   onArquivar?: (id: number) => void;
+  podeArquivar: boolean;
 }) {
   return (
     <div
@@ -367,7 +401,6 @@ function LancamentoCard({
           >
             Tipo
           </div>
-
           <div
             style={{
               color: "#0f172a",
@@ -399,7 +432,6 @@ function LancamentoCard({
           >
             Status
           </div>
-
           <div
             style={{
               color: "#0f172a",
@@ -431,7 +463,6 @@ function LancamentoCard({
           >
             Data
           </div>
-
           <div
             style={{
               color: "#0f172a",
@@ -458,8 +489,9 @@ function LancamentoCard({
 
       {!item.arquivado ? (
         <ActionButton
-          label="Arquivar lançamento"
+          label={podeArquivar ? "Arquivar lançamento" : "Realize o pagamento"}
           variant="secondary"
+          disabled={!podeArquivar}
           onClick={() => onArquivar?.(item.id)}
         />
       ) : null}
@@ -468,6 +500,9 @@ function LancamentoCard({
 }
 
 export default function LancamentosPage() {
+  const [billing, setBilling] = useState<BillingInfo>(BILLING_INICIAL);
+  const [billingLoading, setBillingLoading] = useState(true);
+
   const [lancamentos, setLancamentos] = useState<LancamentoItem[]>(LANCAMENTOS_INICIAIS);
   const [titulo, setTitulo] = useState("");
   const [tipo, setTipo] = useState("administrativo");
@@ -479,6 +514,43 @@ export default function LancamentosPage() {
   const [mensagem, setMensagem] = useState(
     "Área pronta para registrar lançamentos, arquivar quando necessário e continuar lançando novos itens sem perder o histórico.",
   );
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarBilling() {
+      try {
+        setBillingLoading(true);
+        const billingReal = await getBilling("loja-maconica-aurora");
+
+        if (!ativo) return;
+
+        setBilling(billingReal);
+
+        if (billingReal.status !== "ativo" && billingReal.status !== "trial") {
+          setMensagem(
+            "Blindagem comercial ativa. Realize o pagamento para liberar os recursos completos desta área.",
+          );
+        }
+      } finally {
+        if (ativo) {
+          setBillingLoading(false);
+        }
+      }
+    }
+
+    carregarBilling();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const podeCriar = canCreate(billing);
+  const podeArquivar = canArchive(billing);
+  const podeBaixar = canDownload(billing);
+  const mensagemBilling = getBillingMessage(billing);
+  const billingTone = getBillingTone(billing.status);
 
   const ativos = useMemo(
     () => lancamentos.filter((item) => !item.arquivado),
@@ -501,6 +573,11 @@ export default function LancamentosPage() {
   }
 
   function salvarLancamento() {
+    if (!podeCriar) {
+      setMensagem("Pagamento pendente. Realize o pagamento para voltar a salvar novos lançamentos.");
+      return;
+    }
+
     if (!titulo.trim()) {
       setMensagem("Informe o título do lançamento antes de salvar.");
       return;
@@ -530,6 +607,11 @@ export default function LancamentosPage() {
   }
 
   function arquivarLancamento(id: number) {
+    if (!podeArquivar) {
+      setMensagem("Pagamento pendente. Regularize para arquivar registros e continuar usando os recursos completos.");
+      return;
+    }
+
     setLancamentos((atual) =>
       atual.map((item) =>
         item.id === id
@@ -545,7 +627,41 @@ export default function LancamentosPage() {
     setMensagem("Lançamento arquivado com sucesso. O histórico foi preservado.");
   }
 
-  const inputStyle = InputStyle();
+  function baixarDadosLocais() {
+    if (!podeBaixar) {
+      setMensagem("Pagamento pendente. Realize o pagamento para liberar o download dos registros.");
+      return;
+    }
+
+    const conteudo = {
+      exportadoEm: new Date().toISOString(),
+      statusPlano: billing.status,
+      lojaId: billing.lojaId,
+      lojaNome: billing.lojaNome,
+      planoNome: billing.planoNome,
+      total: lancamentos.length,
+      ativos: ativos.length,
+      arquivados: arquivados.length,
+      registros: lancamentos,
+    };
+
+    const blob = new Blob([JSON.stringify(conteudo, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `aurora-loja-maconica-lancamentos-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setMensagem("Backup local baixado com sucesso. O arquivo foi gerado para guardar no PC ou celular.");
+  }
+
+  const inputStyle = inputStyleBase();
 
   return (
     <main
@@ -662,6 +778,76 @@ export default function LancamentosPage() {
           </div>
         </section>
 
+        {mensagemBilling ? (
+          <section style={{ marginTop: 20 }}>
+            <div
+              style={{
+                background: billingTone.background,
+                border: `1px solid ${billingTone.border}`,
+                color: billingTone.color,
+                borderRadius: 24,
+                padding: 20,
+                boxShadow: "0 14px 36px rgba(15, 23, 42, 0.05)",
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <div style={{ flex: "1 1 520px" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    marginBottom: 8,
+                  }}
+                >
+                  Blindagem comercial ativa
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 1.7,
+                    fontWeight: 700,
+                  }}
+                >
+                  {mensagemBilling}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 13,
+                    fontWeight: 800,
+                  }}
+                >
+                  Situação do plano: {getBillingLabel(billing.status)}
+                  {billingLoading ? " • verificando..." : ""}
+                </div>
+              </div>
+
+              <a
+                href={billing.linkPagamento || "#"}
+                style={{
+                  textDecoration: "none",
+                  background: billingTone.buttonBackground,
+                  color: billingTone.buttonColor,
+                  padding: "12px 18px",
+                  borderRadius: 16,
+                  fontWeight: 800,
+                  boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
+                }}
+              >
+                Realizar pagamento
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         <section
           style={{
             marginTop: 22,
@@ -673,7 +859,10 @@ export default function LancamentosPage() {
           <SummaryCard title="Base preparada" value={String(lancamentos.length)} accent />
           <SummaryCard title="Ativos" value={String(ativos.length)} />
           <SummaryCard title="Arquivados" value={String(arquivados.length)} />
-          <SummaryCard title="Relatórios" value="Prontos para ligar" />
+          <SummaryCard
+            title="Downloads"
+            value={podeBaixar ? "Liberados" : "Bloqueados"}
+          />
         </section>
 
         <section style={{ marginTop: 24 }}>
@@ -779,13 +968,40 @@ export default function LancamentosPage() {
                 marginTop: 18,
               }}
             >
-              <ActionButton label="Salvar lançamento" onClick={salvarLancamento} />
+              <ActionButton
+                label={podeCriar ? "Salvar lançamento" : "Realize o pagamento"}
+                onClick={salvarLancamento}
+                disabled={!podeCriar}
+              />
+
               <ActionButton
                 label="Limpar formulário"
                 variant="secondary"
                 onClick={limparFormulario}
               />
+
+              <ActionButton
+                label={podeBaixar ? "Baixar backup local" : "Pagamento necessário"}
+                variant="secondary"
+                onClick={baixarDadosLocais}
+                disabled={!podeBaixar}
+              />
             </div>
+
+            {!podeCriar ? (
+              <p
+                style={{
+                  marginTop: 14,
+                  marginBottom: 0,
+                  color: "#9a3412",
+                  lineHeight: 1.75,
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                Realize o pagamento para voltar a salvar novos registros, arquivar lançamentos e liberar downloads.
+              </p>
+            ) : null}
           </SectionCard>
         </section>
 
@@ -802,6 +1018,7 @@ export default function LancamentosPage() {
                   key={item.id}
                   item={item}
                   onArquivar={arquivarLancamento}
+                  podeArquivar={podeArquivar}
                 />
               ))}
             </div>
@@ -817,7 +1034,11 @@ export default function LancamentosPage() {
               }}
             >
               {arquivados.map((item) => (
-                <LancamentoCard key={item.id} item={item} />
+                <LancamentoCard
+                  key={item.id}
+                  item={item}
+                  podeArquivar={podeArquivar}
+                />
               ))}
             </div>
           </SectionCard>

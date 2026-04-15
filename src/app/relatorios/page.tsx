@@ -1,6 +1,31 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import {
+  BillingInfo,
+  canDownload,
+  getBilling,
+  getBillingLabel,
+  getBillingMessage,
+  getBillingTone,
+} from "@/lib/billing";
+
+const BILLING_INICIAL: BillingInfo = {
+  status: "ativo",
+  vencimento: undefined,
+  diasAtraso: 0,
+  linkPagamento: "#",
+  bloquearCriacao: false,
+  bloquearArquivamento: false,
+  bloquearDownload: false,
+  lojaId: "loja-maconica-aurora",
+  lojaNome: "Loja Maçônica Aurora",
+  planoNome: "Plano Institucional",
+  paymentStatus: "pago",
+  graceUntil: undefined,
+  observacoes: "",
+};
 
 function SummaryCard({
   title,
@@ -97,11 +122,63 @@ function SectionCard({
   );
 }
 
-function LinhaRelatorio({
+function ActionButton({
   label,
-  value,
+  onClick,
+  variant = "primary",
+  disabled = false,
 }: {
   label: string;
+  onClick?: () => void;
+  variant?: "primary" | "secondary";
+  disabled?: boolean;
+}) {
+  const background = disabled
+    ? "#cbd5e1"
+    : variant === "primary"
+      ? "#065f46"
+      : "#ffffff";
+
+  const color = disabled ? "#64748b" : variant === "secondary" ? "#0f172a" : "#ffffff";
+
+  const border = disabled
+    ? "1px solid #cbd5e1"
+    : variant === "secondary"
+      ? "1px solid #dbe4ea"
+      : "1px solid #065f46";
+
+  return (
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{
+        appearance: "none",
+        border,
+        background,
+        color,
+        borderRadius: 16,
+        padding: "12px 16px",
+        fontWeight: 800,
+        fontSize: 14,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.9 : 1,
+        boxShadow:
+          variant === "secondary"
+            ? "0 10px 24px rgba(15, 23, 42, 0.04)"
+            : "0 12px 28px rgba(15, 23, 42, 0.08)",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ReportLine({
+  title,
+  value,
+}: {
+  title: string;
   value: string;
 }) {
   return (
@@ -109,26 +186,25 @@ function LinhaRelatorio({
       style={{
         display: "flex",
         justifyContent: "space-between",
-        gap: 16,
-        padding: "14px 0",
-        borderBottom: "1px solid #eef2f7",
+        gap: 12,
+        padding: "12px 0",
+        borderBottom: "1px solid #e2e8f0",
       }}
     >
       <div
         style={{
-          color: "#475569",
-          fontSize: 15,
+          color: "#334155",
+          fontWeight: 700,
           lineHeight: 1.6,
         }}
       >
-        {label}
+        {title}
       </div>
 
       <div
         style={{
           color: "#0f172a",
-          fontSize: 15,
-          fontWeight: 800,
+          fontWeight: 900,
           textAlign: "right",
           lineHeight: 1.6,
         }}
@@ -140,6 +216,105 @@ function LinhaRelatorio({
 }
 
 export default function RelatoriosPage() {
+  const [billing, setBilling] = useState<BillingInfo>(BILLING_INICIAL);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [mensagem, setMensagem] = useState(
+    "Painel executivo carregado com sucesso. Esta área está pronta para leitura consolidada e exportação local/offline.",
+  );
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarBilling() {
+      try {
+        setBillingLoading(true);
+        const billingReal = await getBilling("loja-maconica-aurora");
+
+        if (!ativo) return;
+
+        setBilling(billingReal);
+
+        if (billingReal.status !== "ativo" && billingReal.status !== "trial") {
+          setMensagem(
+            "Blindagem comercial ativa. Realize o pagamento para liberar os downloads e recursos completos dos relatórios.",
+          );
+        }
+      } finally {
+        if (ativo) {
+          setBillingLoading(false);
+        }
+      }
+    }
+
+    carregarBilling();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const podeBaixar = canDownload(billing);
+  const mensagemBilling = getBillingMessage(billing);
+  const billingTone = getBillingTone(billing.status);
+
+  function baixarResumoExecutivo() {
+    if (!podeBaixar) {
+      setMensagem("Pagamento pendente. Realize o pagamento para liberar o download dos relatórios.");
+      return;
+    }
+
+    const conteudo = {
+      exportadoEm: new Date().toISOString(),
+      lojaId: billing.lojaId,
+      lojaNome: billing.lojaNome,
+      planoNome: billing.planoNome,
+      statusPlano: billing.status,
+      paymentStatus: billing.paymentStatus,
+      resumoExecutivo: {
+        cargosEstruturados: 25,
+        cadastroIrmaos: "Ativo",
+        familiaHistorico: "Prontos",
+        exVeneraveis: "Estruturado",
+        irmaosRemidos: "Estruturado",
+        mensageria: "Ativa",
+        agendaAnual: "Preparada",
+        lancamentosGerais: "Com salvar e arquivar",
+      },
+      escalabilidade: {
+        lojaPequena: "15 a 30 pessoas",
+        lojaMedia: "40 a 100 pessoas",
+        lojaExpandida: "150 a 300+ pessoas",
+        familiaEVinculos: "Suportado",
+        historicoAcumulativo: "Suportado",
+        arquivamentoSemPerda: "Suportado",
+        expansaoPorAnos: "Suportada",
+      },
+      relatoriosFuturos: [
+        "Relatório de irmãos por cargo e situação",
+        "Relatório familiar por irmão",
+        "Relatório de aniversários e felicitações",
+        "Relatório histórico maçônico",
+        "Relatório da agenda por ano, mês e categoria",
+        "Relatório de lançamentos ativos e arquivados",
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(conteudo, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `aurora-loja-maconica-relatorios-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setMensagem("Resumo executivo baixado com sucesso. Arquivo gerado para guardar no PC ou celular.");
+  }
+
   return (
     <main
       style={{
@@ -208,9 +383,9 @@ export default function RelatoriosPage() {
                 }}
               >
                 Painel de leitura executiva com visão consolidada da estrutura
-                institucional da loja, base de irmãos, família, memória,
-                agenda, lançamentos e expansão futura para relatórios completos
-                e filtros reais por período.
+                institucional da loja, base de irmãos, família, memória, agenda,
+                lançamentos e expansão futura para relatórios completos e filtros
+                reais por período.
               </p>
             </div>
 
@@ -255,6 +430,76 @@ export default function RelatoriosPage() {
           </div>
         </section>
 
+        {mensagemBilling ? (
+          <section style={{ marginTop: 20 }}>
+            <div
+              style={{
+                background: billingTone.background,
+                border: `1px solid ${billingTone.border}`,
+                color: billingTone.color,
+                borderRadius: 24,
+                padding: 20,
+                boxShadow: "0 14px 36px rgba(15, 23, 42, 0.05)",
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <div style={{ flex: "1 1 520px" }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    marginBottom: 8,
+                  }}
+                >
+                  Blindagem comercial ativa
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 1.7,
+                    fontWeight: 700,
+                  }}
+                >
+                  {mensagemBilling}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 13,
+                    fontWeight: 800,
+                  }}
+                >
+                  Situação do plano: {getBillingLabel(billing.status)}
+                  {billingLoading ? " • verificando..." : ""}
+                </div>
+              </div>
+
+              <a
+                href={billing.linkPagamento || "#"}
+                style={{
+                  textDecoration: "none",
+                  background: billingTone.buttonBackground,
+                  color: billingTone.buttonColor,
+                  padding: "12px 18px",
+                  borderRadius: 16,
+                  fontWeight: 800,
+                  boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
+                }}
+              >
+                Realizar pagamento
+              </a>
+            </div>
+          </section>
+        ) : null}
+
         <section
           style={{
             marginTop: 22,
@@ -266,67 +511,127 @@ export default function RelatoriosPage() {
           <SummaryCard title="Irmãos" value="Base pronta" accent />
           <SummaryCard title="Família" value="Estruturada" />
           <SummaryCard title="Agenda" value="Preparada" />
-          <SummaryCard title="Lançamentos" value="Operacionais" />
+          <SummaryCard title="Downloads" value={podeBaixar ? "Liberados" : "Bloqueados"} />
         </section>
 
-        <div
-          style={{
-            marginTop: 24,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 18,
-          }}
-        >
+        <section style={{ marginTop: 24 }}>
           <SectionCard eyebrow="Resumo institucional" title="Panorama geral">
-            <LinhaRelatorio label="Cargos estruturados" value="25" />
-            <LinhaRelatorio label="Cadastro de irmãos" value="Ativo" />
-            <LinhaRelatorio label="Família e histórico" value="Prontos" />
-            <LinhaRelatorio label="Ex-Veneráveis" value="Estruturado" />
-            <LinhaRelatorio label="Irmãos remidos" value="Estruturado" />
-            <LinhaRelatorio label="Mensageria" value="Ativa" />
-            <LinhaRelatorio label="Agenda anual" value="Preparada" />
-            <LinhaRelatorio label="Lançamentos gerais" value="Com salvar e arquivar" />
+            <ReportLine title="Cargos estruturados" value="25" />
+            <ReportLine title="Cadastro de irmãos" value="Ativo" />
+            <ReportLine title="Família e histórico" value="Prontos" />
+            <ReportLine title="Ex-Veneráveis" value="Estruturado" />
+            <ReportLine title="Irmãos remidos" value="Estruturado" />
+            <ReportLine title="Mensageria" value="Ativa" />
+            <ReportLine title="Agenda anual" value="Preparada" />
+            <ReportLine title="Lançamentos gerais" value="Com salvar e arquivar" />
           </SectionCard>
+        </section>
 
+        <section style={{ marginTop: 24 }}>
           <SectionCard eyebrow="Capacidade institucional" title="Escalabilidade da loja">
-            <LinhaRelatorio label="Loja pequena" value="15 a 30 pessoas" />
-            <LinhaRelatorio label="Loja média" value="40 a 100 pessoas" />
-            <LinhaRelatorio label="Loja expandida" value="150 a 300+ pessoas" />
-            <LinhaRelatorio label="Família e vínculos" value="Suportado" />
-            <LinhaRelatorio label="Histórico acumulativo" value="Suportado" />
-            <LinhaRelatorio label="Arquivamento sem perda" value="Suportado" />
-            <LinhaRelatorio label="Expansão por anos" value="Suportada" />
+            <ReportLine title="Loja pequena" value="15 a 30 pessoas" />
+            <ReportLine title="Loja média" value="40 a 100 pessoas" />
+            <ReportLine title="Loja expandida" value="150 a 300+ pessoas" />
+            <ReportLine title="Família e vínculos" value="Suportado" />
+            <ReportLine title="Histórico acumulativo" value="Suportado" />
+            <ReportLine title="Arquivamento sem perda" value="Suportado" />
+            <ReportLine title="Expansão por anos" value="Suportada" />
           </SectionCard>
-        </div>
+        </section>
 
-        <div
-          style={{
-            marginTop: 24,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 18,
-          }}
-        >
+        <section style={{ marginTop: 24 }}>
           <SectionCard eyebrow="Relatórios futuros" title="O que será ligado ao banco">
-            <ul
+            <div
               style={{
-                margin: 0,
-                paddingLeft: 22,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              {[
+                "Relatório de irmãos por cargo e situação.",
+                "Relatório familiar por irmão.",
+                "Relatório de aniversários e felicitações.",
+                "Relatório histórico maçônico.",
+                "Relatório da agenda por ano, mês e categoria.",
+                "Relatório de lançamentos ativos e arquivados.",
+              ].map((item) => (
+                <div
+                  key={item}
+                  style={{
+                    borderRadius: 18,
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    padding: 16,
+                    color: "#334155",
+                    fontWeight: 700,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </section>
+
+        <section style={{ marginTop: 24 }}>
+          <SectionCard eyebrow="Leitura executiva" title="Valor da plataforma">
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: 18,
                 color: "#334155",
-                lineHeight: 1.9,
+                lineHeight: 1.85,
                 fontSize: 15,
               }}
             >
-              <li>Relatório de irmãos por cargo e situação.</li>
-              <li>Relatório familiar por irmão.</li>
-              <li>Relatório de aniversários e felicitações.</li>
-              <li>Relatório histórico maçônico.</li>
-              <li>Relatório da agenda por ano, mês e categoria.</li>
-              <li>Relatório de lançamentos ativos e arquivados.</li>
-            </ul>
-          </SectionCard>
+              Esta área consolida a visão institucional da loja e ajuda a demonstrar
+              o valor real da plataforma para outras lojas: organização
+              administrativa, memória histórica, comunicação, agenda, registros
+              internos e capacidade de crescimento com estrutura profissional.
+            </p>
 
-          <SectionCard eyebrow="Leitura executiva" title="Valor da plataforma">
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              <ActionButton
+                label={podeBaixar ? "Baixar resumo executivo" : "Pagamento necessário"}
+                onClick={baixarResumoExecutivo}
+                disabled={!podeBaixar}
+              />
+
+              <ActionButton
+                label="Ir para lançamentos"
+                variant="secondary"
+                onClick={() => {
+                  window.location.href = "/lancamentos";
+                }}
+              />
+            </div>
+
+            {!podeBaixar ? (
+              <p
+                style={{
+                  marginTop: 14,
+                  marginBottom: 0,
+                  color: "#9a3412",
+                  lineHeight: 1.75,
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                Realize o pagamento para liberar o download dos relatórios e manter a cópia local/offline disponível.
+              </p>
+            ) : null}
+          </SectionCard>
+        </section>
+
+        <section style={{ marginTop: 24 }}>
+          <SectionCard eyebrow="Mensagem do sistema" title="Status da operação">
             <p
               style={{
                 margin: 0,
@@ -335,14 +640,10 @@ export default function RelatoriosPage() {
                 fontSize: 15,
               }}
             >
-              Esta área consolida a visão institucional da loja e ajuda a
-              demonstrar o valor real da plataforma para outras lojas:
-              organização administrativa, memória histórica, comunicação,
-              agenda, registros internos e capacidade de crescimento com
-              estrutura profissional.
+              {mensagem}
             </p>
           </SectionCard>
-        </div>
+        </section>
       </div>
     </main>
   );

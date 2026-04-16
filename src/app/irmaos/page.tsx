@@ -1,1283 +1,670 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import {
-  BillingInfo,
-  canCreate,
-  canDownload,
-  getBilling,
-  getBillingLabel,
-  getBillingMessage,
-  getBillingTone,
-} from "@/lib/billing";
-import {
-  CLIENT_ACESSO_INICIAL,
-  ClientAcessoContexto,
-  formatClientPapel,
-  readClientRBAC,
-} from "@/lib/client-rbac";
 
-type Irmao = {
-  id: string;
-  nome: string;
-  cargo: string;
-  telefone: string;
-  email: string;
-  status: string;
-  created_at?: string;
-};
-
-const LOJA_ID = "loja-maconica-aurora";
-
-const BILLING_INICIAL: BillingInfo = {
-  status: "ativo",
-  vencimento: undefined,
-  diasAtraso: 0,
-  linkPagamento: "#",
-  bloquearCriacao: false,
-  bloquearArquivamento: false,
-  bloquearDownload: false,
-  lojaId: LOJA_ID,
-  lojaNome: "Loja Maçônica Aurora",
-  planoNome: "Plano Institucional",
-  paymentStatus: "pago",
-  graceUntil: undefined,
-  observacoes: "",
-};
-
-const FALLBACK_IRMAOS: Irmao[] = [
+const ACESSOS = [
   {
-    id: "fallback-1",
-    nome: "João da Silva",
-    cargo: "Venerável Mestre",
-    telefone: "31999999999",
-    email: "joao@email.com",
-    status: "ativo",
+    titulo: "Família",
+    descricao:
+      "Cadastro familiar protegido com base social, aniversários, observações institucionais e leitura elegante.",
+    href: "/irmaos/familia",
+    status: "Ativo",
   },
   {
-    id: "fallback-2",
-    nome: "Carlos Souza",
-    cargo: "Secretário",
-    telefone: "31988888888",
-    email: "carlos@email.com",
-    status: "ativo",
+    titulo: "Histórico maçônico",
+    descricao:
+      "Área institucional para trajetória do irmão, graus, cargos, comissões, eventos e marcos importantes.",
+    href: "/irmaos/historico",
+    status: "Ativo",
   },
   {
-    id: "fallback-3",
-    nome: "Marcos Pereira",
-    cargo: "Tesoureiro",
-    telefone: "31977777777",
-    email: "marcos@email.com",
-    status: "ativo",
+    titulo: "Documentos e downloads",
+    descricao:
+      "Espaço para fichas, comprovantes, atas, declarações, referências e cópias locais protegidas.",
+    href: "/irmaos/documentos",
+    status: "Ativo",
+  },
+  {
+    titulo: "Agenda e lembretes",
+    descricao:
+      "Base para reuniões, solenidades, aniversários, compromissos e datas importantes do irmão.",
+    href: "/irmaos/agenda",
+    status: "Ativo",
   },
 ];
 
-function SummaryCard({
-  title,
-  value,
-  accent = false,
-}: {
-  title: string;
-  value: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: 22,
-        border: accent ? "1px solid #86efac" : "1px solid #dbe4ea",
-        padding: 20,
-        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.05)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#0f766e",
-          marginBottom: 10,
-        }}
-      >
-        {title}
-      </div>
-
-      <div
-        style={{
-          fontSize: 24,
-          lineHeight: 1.15,
-          fontWeight: 900,
-          color: "#0f172a",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function SectionCard({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      style={{
-        background: "#ffffff",
-        borderRadius: 24,
-        border: "1px solid #dbe4ea",
-        padding: 24,
-        boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#0f766e",
-          marginBottom: 12,
-        }}
-      >
-        {eyebrow}
-      </div>
-
-      <h2
-        style={{
-          marginTop: 0,
-          marginBottom: 14,
-          color: "#0f172a",
-          fontSize: 26,
-          lineHeight: 1.15,
-        }}
-      >
-        {title}
-      </h2>
-
-      {children}
-    </section>
-  );
-}
-
-function ActionButton({
-  label,
-  onClick,
-  variant = "primary",
-  disabled = false,
-}: {
-  label: string;
-  onClick?: () => void;
-  variant?: "primary" | "secondary";
-  disabled?: boolean;
-}) {
-  const background = disabled
-    ? "#cbd5e1"
-    : variant === "primary"
-      ? "#065f46"
-      : "#ffffff";
-
-  const color =
-    disabled ? "#64748b" : variant === "secondary" ? "#0f172a" : "#ffffff";
-
-  const border = disabled
-    ? "1px solid #cbd5e1"
-    : variant === "secondary"
-      ? "1px solid #dbe4ea"
-      : "1px solid #065f46";
-
-  return (
-    <button
-      type="button"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      style={{
-        appearance: "none",
-        border,
-        background,
-        color,
-        borderRadius: 16,
-        padding: "12px 16px",
-        fontWeight: 800,
-        fontSize: 14,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.9 : 1,
-        boxShadow:
-          variant === "secondary"
-            ? "0 10px 24px rgba(15, 23, 42, 0.04)"
-            : "0 12px 28px rgba(15, 23, 42, 0.08)",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label
-      style={{
-        display: "grid",
-        gap: 8,
-      }}
-    >
-      <span
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          color: "#0f766e",
-        }}
-      >
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function inputStyleBase() {
-  return {
-    width: "100%",
-    borderRadius: 16,
-    border: "1px solid #cbd5e1",
-    padding: "12px 14px",
-    fontSize: 15,
-    color: "#0f172a",
-    background: "#ffffff",
-    outline: "none",
-    boxSizing: "border-box" as const,
-  };
-}
-
-function IrmaoCard({ item }: { item: Irmao }) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: 24,
-        border: "1px solid #dbe4ea",
-        padding: 22,
-        boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 10,
-          marginBottom: 14,
-        }}
-      >
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            borderRadius: 999,
-            padding: "7px 12px",
-            background: "#ecfeff",
-            border: "1px solid #a5f3fc",
-            color: "#0f766e",
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {item.cargo}
-        </div>
-
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            borderRadius: 999,
-            padding: "7px 12px",
-            background: item.status === "ativo" ? "#f0fdf4" : "#fff7ed",
-            border:
-              item.status === "ativo" ? "1px solid #86efac" : "1px solid #fdba74",
-            color: item.status === "ativo" ? "#166534" : "#9a3412",
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {item.status}
-        </div>
-      </div>
-
-      <h3
-        style={{
-          margin: 0,
-          color: "#0f172a",
-          fontSize: 22,
-          lineHeight: 1.2,
-        }}
-      >
-        {item.nome}
-      </h3>
-
-      <div
-        style={{
-          marginTop: 14,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            borderRadius: 18,
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            padding: 14,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#0f766e",
-              marginBottom: 8,
-            }}
-          >
-            Telefone
-          </div>
-
-          <div
-            style={{
-              color: "#0f172a",
-              fontSize: 16,
-              fontWeight: 800,
-            }}
-          >
-            {item.telefone}
-          </div>
-        </div>
-
-        <div
-          style={{
-            borderRadius: 18,
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            padding: 14,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#0f766e",
-              marginBottom: 8,
-            }}
-          >
-            E-mail
-          </div>
-
-          <div
-            style={{
-              color: "#0f172a",
-              fontSize: 16,
-              fontWeight: 800,
-              wordBreak: "break-word",
-            }}
-          >
-            {item.email}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const DESTAQUES = [
+  {
+    label: "Área reservada",
+    valor: "Protegida",
+    apoio: "Acesso institucional com foco em privacidade e organização.",
+  },
+  {
+    label: "Módulos ativos",
+    valor: "4",
+    apoio: "Família, histórico, documentos e agenda já estruturados.",
+  },
+  {
+    label: "Downloads",
+    valor: "Liberados",
+    apoio: "Seguimos sua regra de ouro de permitir cópia local.",
+  },
+  {
+    label: "Expansão",
+    valor: "Pronta",
+    apoio: "Base preparada para novos módulos sem quebrar o que já funciona.",
+  },
+];
 
 export default function IrmaosPage() {
-  const [irmaos, setIrmaos] = useState<Irmao[]>(FALLBACK_IRMAOS);
-  const [billing, setBilling] = useState<BillingInfo>(BILLING_INICIAL);
-  const [billingLoading, setBillingLoading] = useState(true);
-  const [loadingIrmaos, setLoadingIrmaos] = useState(true);
-  const [acesso, setAcesso] = useState<ClientAcessoContexto>(CLIENT_ACESSO_INICIAL);
-
-  const [nome, setNome] = useState("");
-  const [cargo, setCargo] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [email, setEmail] = useState("");
-  const [mensagem, setMensagem] = useState(
-    "Cadastro de irmãos carregado com sucesso. Base pronta para organização institucional e cópia local/offline.",
-  );
-
-  function getSupabaseClient() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) return null;
-
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }
-
-  function normalizarIrmao(item: any): Irmao {
-    return {
-      id: String(item.id),
-      nome: item.nome_completo ?? "Irmão sem nome",
-      cargo: item.cargo_nome ?? "Irmão da Loja",
-      telefone: item.telefone ?? "(00) 00000-0000",
-      email: item.email ?? "email@reservado.com",
-      status: item.situacao ?? "ativo",
-      created_at: item.created_at ?? undefined,
-    };
-  }
-
-  async function carregarAcesso() {
-    try {
-      setAcesso((atual) => ({ ...atual, carregando: true }));
-
-      const acessoLido = await readClientRBAC(LOJA_ID);
-
-      setAcesso(acessoLido);
-
-      if (!acessoLido.email) {
-        setMensagem(
-          "Sessão não identificada. A visualização segue em modo seguro e o cadastro permanece bloqueado até confirmar o acesso institucional.",
-        );
-        return;
-      }
-
-      if (!acessoLido.usuarioId) {
-        setMensagem(
-          "Usuário autenticado encontrado, mas ainda sem vínculo confirmado na tabela usuarios. O cadastro de irmãos fica bloqueado até finalizar a ligação institucional.",
-        );
-        return;
-      }
-
-      if (!acessoLido.lojaUsuarioId) {
-        setMensagem(
-          "Usuário localizado, mas ainda sem vínculo completo em loja_usuarios. O modo seguro permanece ativo até finalizar o papel institucional.",
-        );
-        return;
-      }
-
-      setMensagem(
-        `Acesso institucional confirmado para ${acessoLido.email} com papel ${formatClientPapel(acessoLido.papel)}.`,
-      );
-    } catch (error) {
-      const texto =
-        error instanceof Error ? error.message : "falha inesperada na leitura de acesso";
-
-      setAcesso({
-        ...CLIENT_ACESSO_INICIAL,
-        carregando: false,
-      });
-
-      setMensagem(`Falha ao ler acesso institucional. Detalhe: ${texto}`);
-    }
-  }
-
-  async function carregarIrmaos() {
-    try {
-      setLoadingIrmaos(true);
-
-      const supabase = getSupabaseClient();
-
-      if (!supabase) {
-        setMensagem(
-          "Supabase não configurado no cliente. Mantendo base local temporária dos irmãos.",
-        );
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("alm_brothers")
-        .select(
-          "id,loja_id,nome_completo,cargo_nome,telefone,email,situacao,created_at",
-        )
-        .eq("loja_id", LOJA_ID)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        setMensagem(
-          `Leitura real dos irmãos com fallback local. Detalhe: ${error.message}`,
-        );
-        return;
-      }
-
-      if (Array.isArray(data) && data.length > 0) {
-        setIrmaos(data.map(normalizarIrmao));
-        setMensagem("Cadastro de irmãos carregado com leitura real do Supabase.");
-      } else {
-        setMensagem(
-          "Nenhum irmão encontrado no Supabase ainda. Mantendo base local inicial para continuidade.",
-        );
-      }
-    } catch (error) {
-      const texto =
-        error instanceof Error ? error.message : "falha inesperada na leitura";
-      setMensagem(`Fallback local mantido na base de irmãos. Detalhe: ${texto}`);
-    } finally {
-      setLoadingIrmaos(false);
-    }
-  }
-
-  useEffect(() => {
-    let ativo = true;
-
-    async function carregarBilling() {
-      try {
-        setBillingLoading(true);
-        const billingReal = await getBilling(LOJA_ID);
-
-        if (!ativo) return;
-
-        setBilling(billingReal);
-
-        if (billingReal.status !== "ativo" && billingReal.status !== "trial") {
-          setMensagem(
-            "Blindagem comercial ativa. Realize o pagamento para liberar novos cadastros e downloads da base de irmãos.",
-          );
-        }
-      } finally {
-        if (ativo) {
-          setBillingLoading(false);
-        }
-      }
-    }
-
-    carregarBilling();
-    carregarIrmaos();
-    carregarAcesso();
-
-    return () => {
-      ativo = false;
-    };
-  }, []);
-
-  const podeCriar =
-    canCreate(billing) && acesso.canManageMembers && !acesso.carregando;
-
-  const podeBaixar = canDownload(billing);
-  const mensagemBilling = getBillingMessage(billing);
-  const billingTone = getBillingTone(billing.status);
-
-  const totalAtivos = useMemo(
-    () => irmaos.filter((item) => item.status === "ativo").length,
-    [irmaos],
-  );
-
-  function limparFormulario() {
-    setNome("");
-    setCargo("");
-    setTelefone("");
-    setEmail("");
-  }
-
-  async function salvar() {
-    if (!canCreate(billing)) {
-      setMensagem("Pagamento necessário para cadastrar novos irmãos.");
-      return;
-    }
-
-    if (acesso.carregando) {
-      setMensagem("Aguardando confirmação do acesso institucional.");
-      return;
-    }
-
-    if (!acesso.canManageMembers) {
-      setMensagem(
-        "Seu acesso atual não permite cadastrar irmãos. Esta operação fica restrita aos perfis autorizados.",
-      );
-      return;
-    }
-
-    if (!nome.trim()) {
-      setMensagem("Informe o nome do irmão antes de salvar.");
-      return;
-    }
-
-    try {
-      const supabase = getSupabaseClient();
-
-      if (!supabase) {
-        const novoLocal: Irmao = {
-          id: String(Date.now()),
-          nome: nome.trim(),
-          cargo: cargo.trim() || "Irmão da Loja",
-          telefone: telefone.trim() || "(00) 00000-0000",
-          email: email.trim() || "email@reservado.com",
-          status: "ativo",
-        };
-
-        setIrmaos((atual) => [novoLocal, ...atual]);
-        setMensagem(
-          "Supabase não configurado no cliente. Irmão salvo apenas na base local temporária.",
-        );
-        limparFormulario();
-        return;
-      }
-
-      const payload = {
-        loja_id: LOJA_ID,
-        nome_completo: nome.trim(),
-        cargo_nome: cargo.trim() || "Irmão da Loja",
-        telefone: telefone.trim() || "(00) 00000-0000",
-        email: email.trim() || "email@reservado.com",
-        situacao: "ativo",
-      };
-
-      const { data, error } = await supabase
-        .from("alm_brothers")
-        .insert(payload)
-        .select(
-          "id,loja_id,nome_completo,cargo_nome,telefone,email,situacao,created_at",
-        )
-        .single();
-
-      if (error) {
-        setMensagem(`Falha ao salvar no Supabase: ${error.message}`);
-        return;
-      }
-
-      setIrmaos((atual) => [normalizarIrmao(data), ...atual]);
-      setMensagem("Irmão cadastrado com sucesso na base real do Supabase.");
-      limparFormulario();
-    } catch (error) {
-      const texto =
-        error instanceof Error ? error.message : "falha inesperada no salvamento";
-      setMensagem(`Erro ao salvar irmão: ${texto}`);
-    }
-  }
-
-  function baixar() {
-    if (!podeBaixar) {
-      setMensagem("Pagamento necessário para baixar a base de irmãos.");
-      return;
-    }
-
-    const conteudo = {
-      exportadoEm: new Date().toISOString(),
-      lojaId: billing.lojaId,
-      lojaNome: billing.lojaNome,
-      planoNome: billing.planoNome,
-      statusPlano: billing.status,
-      totalIrmaos: irmaos.length,
-      totalAtivos,
-      origem: "irmaos",
-      acessoAtual: {
-        email: acesso.email,
-        papel: acesso.papel,
-        permissoes: acesso.permissoes,
-        canManageMembers: acesso.canManageMembers,
-        canViewReserved: acesso.canViewReserved,
-        canViewFinance: acesso.canViewFinance,
-      },
-      irmaos,
-    };
-
-    const blob = new Blob([JSON.stringify(conteudo, null, 2)], {
-      type: "application/json;charset=utf-8",
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aurora-loja-maconica-irmaos-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    setMensagem("Base de irmãos baixada com sucesso para guardar no PC ou celular.");
-  }
-
-  const inputStyle = inputStyleBase();
-
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f8fbfd 0%, #edf6f9 45%, #f8fbfd 100%)",
-        padding: "24px 16px 56px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: 1260, margin: "0 auto" }}>
-        <section
-          style={{
-            borderRadius: 30,
-            padding: 28,
-            background:
-              "linear-gradient(135deg, #052e2b 0%, #065f46 55%, #059669 100%)",
-            color: "#ffffff",
-            boxShadow: "0 30px 80px rgba(5, 46, 43, 0.25)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: 16,
-            }}
-          >
-            <div style={{ maxWidth: 900 }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  borderRadius: 999,
-                  padding: "8px 14px",
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  marginBottom: 16,
-                }}
-              >
-                Cadastro interno protegido
-              </div>
+    <main style={styles.page}>
+      <div style={styles.glowTop} />
+      <div style={styles.glowBottom} />
 
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: 36,
-                  lineHeight: 1.08,
-                }}
-              >
-                Cadastro de Irmãos • Aurora Loja Maçônica
-              </h1>
-
-              <p
-                style={{
-                  marginTop: 16,
-                  marginBottom: 0,
-                  maxWidth: 820,
-                  color: "rgba(255,255,255,0.92)",
-                  lineHeight: 1.8,
-                  fontSize: 16,
-                }}
-              >
-                Área institucional para organização dos irmãos da loja, com base
-                preparada para cargos, situação cadastral, contatos, identificação
-                interna e integração futura com permissões, família, foto e
-                mensageria real.
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-              }}
-            >
-              <Link
-                href="/"
-                style={{
-                  textDecoration: "none",
-                  background: "#ffffff",
-                  color: "#065f46",
-                  padding: "12px 18px",
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
-                }}
-              >
-                Voltar à home
-              </Link>
-
-              <Link
-                href="/irmaos/familia"
-                style={{
-                  textDecoration: "none",
-                  background: "rgba(255,255,255,0.10)",
-                  color: "#ffffff",
-                  padding: "12px 18px",
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  border: "1px solid rgba(255,255,255,0.18)",
-                }}
-              >
-                Ir para família
-              </Link>
-            </div>
+      <section style={styles.container}>
+        <header style={styles.hero}>
+          <div style={styles.heroTop}>
+            <div style={styles.badge}>Cadastro do irmão e base institucional protegida</div>
+            <div style={styles.miniBadge}>Aurora Loja Maçônica</div>
           </div>
-        </section>
 
-        {mensagemBilling ? (
-          <section style={{ marginTop: 20 }}>
-            <div
-              style={{
-                background: billingTone.background,
-                border: `1px solid ${billingTone.border}`,
-                color: billingTone.color,
-                borderRadius: 24,
-                padding: 20,
-                boxShadow: "0 14px 36px rgba(15, 23, 42, 0.05)",
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 14,
-              }}
-            >
-              <div style={{ flex: "1 1 520px" }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    marginBottom: 8,
-                  }}
-                >
-                  Blindagem comercial ativa
-                </div>
+          <div style={styles.heroGrid}>
+            <div style={styles.heroMain}>
+              <h1 style={styles.title}>Irmãos • Aurora Loja Maçônica</h1>
 
-                <div
-                  style={{
-                    fontSize: 16,
-                    lineHeight: 1.7,
-                    fontWeight: 700,
-                  }}
-                >
-                  {mensagemBilling}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 10,
-                    fontSize: 13,
-                    fontWeight: 800,
-                  }}
-                >
-                  Situação do plano: {getBillingLabel(billing.status)}
-                  {billingLoading ? " • verificando..." : ""}
-                </div>
-              </div>
-
-              <a
-                href={billing.linkPagamento || "#"}
-                style={{
-                  textDecoration: "none",
-                  background: billingTone.buttonBackground,
-                  color: billingTone.buttonColor,
-                  padding: "12px 18px",
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
-                }}
-              >
-                Realizar pagamento
-              </a>
-            </div>
-          </section>
-        ) : null}
-
-        <section
-          style={{
-            marginTop: 22,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <SummaryCard title="Irmãos cadastrados" value={String(irmaos.length)} accent />
-          <SummaryCard title="Ativos" value={String(totalAtivos)} />
-          <SummaryCard
-            title="Acesso atual"
-            value={acesso.carregando ? "Lendo..." : formatClientPapel(acesso.papel)}
-          />
-          <SummaryCard title="Downloads" value={podeBaixar ? "Liberados" : "Bloqueados"} />
-        </section>
-
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="RBAC institucional" title="Leitura do acesso atual">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: 14,
-              }}
-            >
-              <div
-                style={{
-                  borderRadius: 18,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#0f766e",
-                    marginBottom: 8,
-                  }}
-                >
-                  E-mail
-                </div>
-                <div
-                  style={{
-                    color: "#0f172a",
-                    fontSize: 15,
-                    fontWeight: 800,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {acesso.email || "Sessão não identificada"}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#0f766e",
-                    marginBottom: 8,
-                  }}
-                >
-                  Papel
-                </div>
-                <div
-                  style={{
-                    color: "#0f172a",
-                    fontSize: 15,
-                    fontWeight: 800,
-                  }}
-                >
-                  {acesso.carregando ? "Carregando..." : formatClientPapel(acesso.papel)}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#0f766e",
-                    marginBottom: 8,
-                  }}
-                >
-                  Gerenciar irmãos
-                </div>
-                <div
-                  style={{
-                    color: acesso.canManageMembers ? "#166534" : "#9a3412",
-                    fontSize: 15,
-                    fontWeight: 800,
-                  }}
-                >
-                  {acesso.canManageMembers ? "Liberado" : "Bloqueado"}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  padding: 16,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#0f766e",
-                    marginBottom: 8,
-                  }}
-                >
-                  Financeiro
-                </div>
-                <div
-                  style={{
-                    color: acesso.canViewFinance ? "#166534" : "#9a3412",
-                    fontSize: 15,
-                    fontWeight: 800,
-                  }}
-                >
-                  {acesso.canViewFinance ? "Liberado" : "Restrito"}
-                </div>
-              </div>
-            </div>
-
-            <p
-              style={{
-                marginTop: 16,
-                marginBottom: 0,
-                color: "#475569",
-                lineHeight: 1.75,
-                fontSize: 15,
-              }}
-            >
-              Permissões identificadas:{" "}
-              {acesso.permissoes.length > 0
-                ? acesso.permissoes.join(", ")
-                : "nenhuma permissão direta identificada"}
-              .
-            </p>
-          </SectionCard>
-        </section>
-
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="Novo irmão" title="Salvar cadastro institucional">
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 14,
-                borderRadius: 18,
-                background: podeCriar ? "#ecfdf5" : "#fff7ed",
-                border: podeCriar ? "1px solid #86efac" : "1px solid #fdba74",
-                color: podeCriar ? "#166534" : "#9a3412",
-                fontWeight: 800,
-                lineHeight: 1.7,
-              }}
-            >
-              {podeCriar
-                ? "Acesso liberado para cadastro institucional de irmãos."
-                : acesso.carregando
-                  ? "Aguardando leitura do acesso institucional para liberar o cadastro."
-                  : "Seu acesso atual não permite cadastrar irmãos nesta loja."}
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: 14,
-              }}
-            >
-              <Field label="Nome">
-                <input
-                  placeholder="Ex.: João da Silva"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="Cargo">
-                <input
-                  placeholder="Ex.: Venerável Mestre"
-                  value={cargo}
-                  onChange={(e) => setCargo(e.target.value)}
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="Telefone">
-                <input
-                  placeholder="Ex.: 31999999999"
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="E-mail">
-                <input
-                  placeholder="Ex.: joao@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={inputStyle}
-                />
-              </Field>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-                marginTop: 18,
-              }}
-            >
-              <ActionButton
-                label={podeCriar ? "Salvar irmão" : "Acesso restrito"}
-                onClick={salvar}
-                disabled={!podeCriar}
-              />
-
-              <ActionButton
-                label="Limpar formulário"
-                variant="secondary"
-                onClick={limparFormulario}
-              />
-
-              <ActionButton
-                label={podeBaixar ? "Baixar base local" : "Pagamento necessário"}
-                variant="secondary"
-                onClick={baixar}
-                disabled={!podeBaixar}
-              />
-
-              <ActionButton
-                label="Atualizar leitura"
-                variant="secondary"
-                onClick={() => {
-                  carregarIrmaos();
-                  carregarAcesso();
-                }}
-              />
-            </div>
-
-            {!podeCriar ? (
-              <p
-                style={{
-                  marginTop: 14,
-                  marginBottom: 0,
-                  color: "#9a3412",
-                  lineHeight: 1.75,
-                  fontSize: 14,
-                  fontWeight: 700,
-                }}
-              >
-                O cadastro de irmãos exige pagamento ativo e perfil institucional com permissão para gerenciamento.
+              <p style={styles.description}>
+                Painel institucional criado para organizar o cadastro do irmão, estrutura familiar,
+                histórico maçônico, documentação, downloads, agenda e futuras expansões com
+                segurança, elegância visual e proteção dos dados da Loja.
               </p>
-            ) : null}
-          </SectionCard>
-        </section>
 
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="Base interna" title="Relação de irmãos da loja">
-            <div
-              style={{
-                display: "grid",
-                gap: 16,
-              }}
-            >
-              {irmaos.map((item) => (
-                <IrmaoCard key={item.id} item={item} />
-              ))}
+              <div style={styles.actions}>
+                <Link href="/" style={styles.primaryButton}>
+                  Voltar à home
+                </Link>
+
+                <Link href="/irmaos/familia" style={styles.secondaryButton}>
+                  Ir para família
+                </Link>
+              </div>
+
+              <div style={styles.notice}>
+                <strong>Sistema em constante atualização.</strong> Esta área pode passar por
+                melhorias visuais, operacionais e institucionais durante a evolução do projeto.
+              </div>
             </div>
-          </SectionCard>
-        </section>
 
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="Estrutura pronta" title="O que esta página já suporta">
-            <div
-              style={{
-                display: "grid",
-                gap: 12,
-              }}
-            >
-              {[
-                "Nome do irmão.",
-                "Cargo institucional.",
-                "Situação cadastral.",
-                "Contato interno.",
-                "Leitura real do Supabase com fallback local.",
-                "Primeira camada de RBAC por helper central.",
-              ].map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    borderRadius: 18,
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    padding: 16,
-                    color: "#334155",
-                    fontWeight: 700,
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {item}
+            <aside style={styles.sidePanel}>
+              <div style={styles.profileCard}>
+                <div style={styles.profileHeader}>Registro institucional</div>
+
+                <div style={styles.profileName}>Ricardo Justino Silva</div>
+
+                <div style={styles.pillRow}>
+                  <span style={styles.pillDark}>Completo</span>
+                  <span style={styles.pillLight}>Irmão</span>
+                  <span style={styles.pillLight}>Protegido</span>
                 </div>
-              ))}
-            </div>
-          </SectionCard>
-        </section>
 
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="Próxima expansão" title="O que ligamos depois">
-            <div
-              style={{
-                display: "grid",
-                gap: 12,
-              }}
-            >
-              {[
-                "Ligação total com cargos e mandato atual.",
-                "Foto real vinculada ao cadastro.",
-                "Família, cunhada, sobrinhos e netos por irmão.",
-                "Busca e filtros internos.",
-                "Exportações premium por PDF e CSV.",
-              ].map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    borderRadius: 18,
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    padding: 16,
-                    color: "#334155",
-                    fontWeight: 700,
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {item}
+                <div style={styles.infoGrid}>
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>UUID real</span>
+                    <strong style={styles.infoValue}>
+                      be8ae6de-f312-402f-834b-6739c033217e
+                    </strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>Cargo</span>
+                    <strong style={styles.infoValue}>Irmão da Loja</strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>E-mail</span>
+                    <strong style={styles.infoValue}>ricardogrupoexecutivo1@gmail.com</strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>Situação</span>
+                    <strong style={styles.infoValue}>Painel central ativo e consolidado</strong>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </SectionCard>
+              </div>
+            </aside>
+          </div>
+        </header>
+
+        <section style={styles.metricGrid}>
+          {DESTAQUES.map((item) => (
+            <article key={item.label} style={styles.metricCard}>
+              <span style={styles.metricLabel}>{item.label}</span>
+              <strong style={styles.metricValue}>{item.valor}</strong>
+              <span style={styles.metricHint}>{item.apoio}</span>
+            </article>
+          ))}
         </section>
 
-        <section style={{ marginTop: 24 }}>
-          <SectionCard eyebrow="Mensagem do sistema" title="Status da operação">
-            <p
-              style={{
-                margin: 0,
-                color: "#334155",
-                lineHeight: 1.85,
-                fontSize: 15,
-              }}
-            >
-              {mensagem}
-            </p>
-          </SectionCard>
+        <section style={styles.contentGrid}>
+          <article style={styles.mainCard}>
+            <div style={styles.sectionHeader}>
+              <div>
+                <h2 style={styles.sectionTitle}>Acessos principais</h2>
+                <p style={styles.sectionSubtitle}>
+                  Entrada rápida para as áreas institucionais já prontas do cadastro do irmão.
+                </p>
+              </div>
+
+              <div style={styles.sectionTag}>Painel central</div>
+            </div>
+
+            <div style={styles.cardsGrid}>
+              {ACESSOS.map((item) => (
+                <Link key={item.titulo} href={item.href} style={styles.accessCard}>
+                  <div style={styles.accessTop}>
+                    <div style={styles.accessTitle}>{item.titulo}</div>
+                    <div style={styles.statusPill}>{item.status}</div>
+                  </div>
+
+                  <p style={styles.accessDescription}>{item.descricao}</p>
+
+                  <div style={styles.accessFooter}>Abrir área</div>
+                </Link>
+              ))}
+            </div>
+          </article>
+
+          <aside style={styles.sideColumn}>
+            <article style={styles.sideCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <h2 style={styles.sectionTitle}>Direção institucional</h2>
+                  <p style={styles.sectionSubtitle}>
+                    A base foi organizada para crescimento seguro, sem perder o padrão bonito.
+                  </p>
+                </div>
+
+                <div style={styles.sectionTag}>Estratégia</div>
+              </div>
+
+              <div style={styles.readingStack}>
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Privacidade por padrão</strong>
+                  <p style={styles.readingText}>
+                    Os dados do irmão e das áreas relacionadas permanecem em ambiente reservado, com
+                    foco em organização, proteção e governança institucional.
+                  </p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Visual verde premium</strong>
+                  <p style={styles.readingText}>
+                    Mantivemos a identidade clara premium em verde para toda a trilha dos irmãos,
+                    incluindo família, histórico, documentos e agenda.
+                  </p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Evolução segura</strong>
+                  <p style={styles.readingText}>
+                    O caminho agora é continuar com mudanças pequenas, uma por vez, sem quebrar o
+                    que já está funcionando.
+                  </p>
+                </div>
+              </div>
+            </article>
+
+            <article style={styles.sideCard}>
+              <div style={styles.sectionHeader}>
+                <div>
+                  <h2 style={styles.sectionTitle}>Atalhos rápidos</h2>
+                  <p style={styles.sectionSubtitle}>
+                    Navegação curta para manter o uso simples no PC e no celular.
+                  </p>
+                </div>
+
+                <div style={styles.sectionTag}>Rápido</div>
+              </div>
+
+              <div style={styles.quickLinks}>
+                <Link href="/irmaos/familia" style={styles.quickLink}>
+                  Abrir Família
+                </Link>
+
+                <Link href="/irmaos/historico" style={styles.quickLink}>
+                  Abrir Histórico
+                </Link>
+
+                <Link href="/irmaos/documentos" style={styles.quickLinkSecondary}>
+                  Abrir Documentos
+                </Link>
+
+                <Link href="/irmaos/agenda" style={styles.quickLinkSecondary}>
+                  Abrir Agenda
+                </Link>
+              </div>
+            </article>
+          </aside>
         </section>
-      </div>
+      </section>
     </main>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    padding: "28px 16px 56px",
+    background:
+      "radial-gradient(circle at top left, rgba(22,163,74,0.16), transparent 24%), radial-gradient(circle at bottom right, rgba(13,148,136,0.12), transparent 24%), linear-gradient(180deg, #f3fbf5 0%, #fbfffc 100%)",
+    fontFamily:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    color: "#10231a",
+    position: "relative",
+    overflow: "hidden",
+  },
+  glowTop: {
+    position: "absolute",
+    top: -110,
+    left: -110,
+    width: 300,
+    height: 300,
+    borderRadius: "50%",
+    background: "rgba(34,197,94,0.16)",
+    filter: "blur(75px)",
+    pointerEvents: "none",
+  },
+  glowBottom: {
+    position: "absolute",
+    right: -100,
+    bottom: -100,
+    width: 300,
+    height: 300,
+    borderRadius: "50%",
+    background: "rgba(16,185,129,0.12)",
+    filter: "blur(75px)",
+    pointerEvents: "none",
+  },
+  container: {
+    maxWidth: 1360,
+    margin: "0 auto",
+    position: "relative",
+    zIndex: 1,
+  },
+  hero: {
+    background: "rgba(255,255,255,0.84)",
+    backdropFilter: "blur(14px)",
+    border: "1px solid rgba(134,239,172,0.24)",
+    borderRadius: 32,
+    padding: 28,
+    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
+    marginBottom: 22,
+  },
+  heroTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap",
+    marginBottom: 18,
+  },
+  badge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "9px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    background: "rgba(34,197,94,0.12)",
+    color: "#166534",
+    border: "1px solid rgba(34,197,94,0.18)",
+  },
+  miniBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "9px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800,
+    background: "rgba(22,163,74,0.08)",
+    color: "#14532d",
+    border: "1px solid rgba(34,197,94,0.12)",
+  },
+  heroGrid: {
+    display: "grid",
+    gridTemplateColumns: "1.35fr 0.9fr",
+    gap: 22,
+  },
+  heroMain: {
+    display: "grid",
+    gap: 16,
+    alignContent: "start",
+  },
+  sidePanel: {
+    display: "flex",
+  },
+  title: {
+    margin: 0,
+    fontSize: "clamp(2.1rem, 4.2vw, 3.3rem)",
+    lineHeight: 1.02,
+    fontWeight: 900,
+    letterSpacing: "-0.04em",
+    color: "#10231a",
+  },
+  description: {
+    margin: 0,
+    fontSize: 16,
+    lineHeight: 1.8,
+    color: "#355244",
+    maxWidth: 860,
+  },
+  actions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  primaryButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    padding: "0 18px",
+    borderRadius: 16,
+    textDecoration: "none",
+    fontWeight: 900,
+    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
+    color: "#ffffff",
+    boxShadow: "0 16px 35px rgba(22,163,74,0.20)",
+  },
+  secondaryButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    padding: "0 18px",
+    borderRadius: 16,
+    textDecoration: "none",
+    fontWeight: 800,
+    background: "#ffffff",
+    color: "#14532d",
+    border: "1px solid rgba(34,197,94,0.18)",
+  },
+  notice: {
+    padding: "14px 16px",
+    borderRadius: 18,
+    background: "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(16,185,129,0.08))",
+    border: "1px solid rgba(34,197,94,0.14)",
+    color: "#214034",
+    fontSize: 14,
+    lineHeight: 1.6,
+  },
+  profileCard: {
+    width: "100%",
+    background: "linear-gradient(180deg, #ffffff 0%, #f7fff8 100%)",
+    borderRadius: 28,
+    border: "1px solid rgba(134,239,172,0.26)",
+    boxShadow: "0 22px 50px rgba(6,78,59,0.08)",
+    padding: 22,
+    display: "grid",
+    gap: 14,
+  },
+  profileHeader: {
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.45,
+    color: "#15803d",
+  },
+  profileName: {
+    fontSize: 28,
+    lineHeight: 1.06,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  pillRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  pillDark: {
+    display: "inline-flex",
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "#14532d",
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  pillLight: {
+    display: "inline-flex",
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "rgba(22,163,74,0.08)",
+    color: "#14532d",
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid rgba(34,197,94,0.12)",
+  },
+  infoGrid: {
+    display: "grid",
+    gap: 12,
+  },
+  infoItem: {
+    display: "grid",
+    gap: 5,
+    padding: "13px 14px",
+    borderRadius: 18,
+    background: "#f7fcf8",
+    border: "1px solid rgba(134,239,172,0.22)",
+  },
+  infoLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.35,
+    color: "#5b7b6b",
+    fontWeight: 800,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: "#10231a",
+    fontWeight: 800,
+    wordBreak: "break-word",
+  },
+  metricGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 16,
+    marginBottom: 22,
+  },
+  metricCard: {
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid rgba(134,239,172,0.22)",
+    borderRadius: 24,
+    padding: 20,
+    boxShadow: "0 16px 45px rgba(6,78,59,0.06)",
+    display: "grid",
+    gap: 8,
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: 900,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    color: "#4d6b5b",
+  },
+  metricValue: {
+    fontSize: 30,
+    lineHeight: 1,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  metricHint: {
+    fontSize: 13,
+    color: "#5d786a",
+    lineHeight: 1.55,
+  },
+  contentGrid: {
+    display: "grid",
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: 22,
+    alignItems: "start",
+  },
+  mainCard: {
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid rgba(134,239,172,0.22)",
+    borderRadius: 28,
+    padding: 24,
+    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
+  },
+  sideColumn: {
+    display: "grid",
+    gap: 22,
+  },
+  sideCard: {
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid rgba(134,239,172,0.22)",
+    borderRadius: 28,
+    padding: 24,
+    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
+  },
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 18,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 24,
+    lineHeight: 1.08,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  sectionSubtitle: {
+    margin: "8px 0 0",
+    fontSize: 14,
+    lineHeight: 1.6,
+    color: "#5d786a",
+  },
+  sectionTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 36,
+    padding: "0 12px",
+    borderRadius: 999,
+    background: "rgba(22,163,74,0.10)",
+    color: "#166534",
+    border: "1px solid rgba(22,163,74,0.16)",
+    fontSize: 12,
+    fontWeight: 900,
+    whiteSpace: "nowrap",
+  },
+  cardsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 16,
+  },
+  accessCard: {
+    display: "grid",
+    gap: 12,
+    textDecoration: "none",
+    padding: 18,
+    borderRadius: 22,
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
+    border: "1px solid rgba(134,239,172,0.20)",
+    boxShadow: "0 14px 34px rgba(6,78,59,0.05)",
+    color: "inherit",
+  },
+  accessTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+  accessTitle: {
+    fontSize: 20,
+    lineHeight: 1.15,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  statusPill: {
+    display: "inline-flex",
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: "rgba(22,163,74,0.10)",
+    color: "#166534",
+    fontSize: 12,
+    fontWeight: 800,
+    border: "1px solid rgba(22,163,74,0.14)",
+    whiteSpace: "nowrap",
+  },
+  accessDescription: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: 1.7,
+    color: "#355244",
+  },
+  accessFooter: {
+    fontSize: 13,
+    fontWeight: 900,
+    color: "#14532d",
+  },
+  readingStack: {
+    display: "grid",
+    gap: 14,
+  },
+  readingItem: {
+    padding: "16px",
+    borderRadius: 18,
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
+    border: "1px solid rgba(134,239,172,0.18)",
+  },
+  readingTitle: {
+    display: "block",
+    marginBottom: 6,
+    fontSize: 15,
+    color: "#10231a",
+    fontWeight: 900,
+  },
+  readingText: {
+    margin: 0,
+    fontSize: 14,
+    lineHeight: 1.7,
+    color: "#4f6c5e",
+  },
+  quickLinks: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  quickLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+    padding: "0 16px",
+    borderRadius: 16,
+    textDecoration: "none",
+    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
+    color: "#ffffff",
+    fontWeight: 900,
+    boxShadow: "0 16px 35px rgba(22,163,74,0.18)",
+  },
+  quickLinkSecondary: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 46,
+    padding: "0 16px",
+    borderRadius: 16,
+    textDecoration: "none",
+    background: "#ffffff",
+    color: "#14532d",
+    border: "1px solid rgba(34,197,94,0.18)",
+    fontWeight: 800,
+  },
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   LOJA_ACESSO_CORTESIA_PADRAO,
   criarPerfilLojaSimples,
@@ -20,65 +20,120 @@ type SessaoLoja = {
   acessoLiberado: boolean;
 };
 
-const perfil = criarPerfilLojaSimples(LOJA_ACESSO_CORTESIA_PADRAO);
-const acesso = resumoAcesso(perfil);
+export default function LoginPage() {
+  const perfilPadrao = useMemo(
+    () => criarPerfilLojaSimples(LOJA_ACESSO_CORTESIA_PADRAO),
+    []
+  );
+  const leitura = useMemo(() => resumoAcesso(perfilPadrao), [perfilPadrao]);
 
-const AREAS = [
-  {
-    titulo: "Irmãos",
-    descricao:
-      "Painel central do irmão com acesso às áreas de família, histórico, documentos e agenda.",
-    href: "/irmaos",
-    status: "Liberado",
-  },
-  {
-    titulo: "Família",
-    descricao:
-      "Cadastro familiar protegido com memória social, observações institucionais e leitura elegante.",
-    href: "/irmaos/familia",
-    status: "Liberado",
-  },
-  {
-    titulo: "Histórico maçônico",
-    descricao:
-      "Trajetória do irmão com graus, cargos, marcos importantes, eventos e observações institucionais.",
-    href: "/irmaos/historico",
-    status: "Liberado",
-  },
-  {
-    titulo: "Documentos e downloads",
-    descricao:
-      "Espaço para fichas, comprovantes, atas, declarações e cópias locais seguras.",
-    href: "/irmaos/documentos",
-    status: "Liberado",
-  },
-  {
-    titulo: "Agenda e lembretes",
-    descricao:
-      "Reuniões, solenidades, aniversários e compromissos importantes da rotina institucional.",
-    href: "/irmaos/agenda",
-    status: "Liberado",
-  },
-];
+  const [nomeLoja, setNomeLoja] = useState(perfilPadrao.nomeLoja);
+  const [login, setLogin] = useState(perfilPadrao.login);
+  const [senha, setSenha] = useState("");
+  const [lembrar, setLembrar] = useState(true);
+  const [mensagem, setMensagem] = useState("");
+  const [erro, setErro] = useState("");
+  const [sessao, setSessao] = useState<SessaoLoja | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
-export default function HomePage() {
-  const [sessaoLogada, setSessaoLogada] = useState(false);
-
-  useEffect(() => {
+  function salvarSessaoLocal(payload: SessaoLoja) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // falha silenciosa proposital
+    }
+  }
 
-      if (!raw) {
-        setSessaoLogada(false);
+  function limparSessaoLocal() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // falha silenciosa proposital
+    }
+  }
+
+  async function entrar(evento: React.FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setMensagem("");
+    setErro("");
+
+    if (!nomeLoja.trim()) {
+      setErro("Informe o nome da loja.");
+      return;
+    }
+
+    if (!login.trim()) {
+      setErro("Informe o login.");
+      return;
+    }
+
+    if (!senha.trim()) {
+      setErro("Informe a senha.");
+      return;
+    }
+
+    try {
+      setEnviando(true);
+
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nomeLoja,
+          login,
+          senha,
+        }),
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || !json?.success) {
+        setErro(
+          json?.message ||
+            "Não foi possível autenticar agora. Tente novamente."
+        );
         return;
       }
 
-      const parsed = JSON.parse(raw) as SessaoLoja;
-      setSessaoLogada(Boolean(parsed?.autenticado && parsed?.acessoLiberado));
+      const novaSessao: SessaoLoja = json.session;
+
+      setSessao(novaSessao);
+
+      if (lembrar) {
+        salvarSessaoLocal(novaSessao);
+      } else {
+        limparSessaoLocal();
+      }
+
+      setMensagem(
+        json?.message ||
+          "Login realizado com sucesso. Sessão protegida criada para a loja."
+      );
+      setErro("");
     } catch {
-      setSessaoLogada(false);
+      setErro("Não foi possível processar o login agora.");
+    } finally {
+      setEnviando(false);
     }
-  }, []);
+  }
+
+  async function sairSessao() {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } catch {
+      // mesmo com falha, limpamos localmente
+    }
+
+    setSessao(null);
+    limparSessaoLocal();
+    setMensagem("Sessão encerrada com sucesso.");
+    setErro("");
+    setSenha("");
+  }
 
   return (
     <main style={styles.page}>
@@ -88,82 +143,72 @@ export default function HomePage() {
       <section style={styles.container}>
         <header style={styles.hero}>
           <div style={styles.heroTop}>
-            <div style={styles.badge}>Sistema restrito da loja com acesso controlado</div>
+            <div style={styles.badge}>Login geral simples da loja</div>
             <div style={styles.miniBadge}>Aurora Loja Maçônica</div>
           </div>
 
           <div style={styles.heroGrid}>
             <div style={styles.heroMain}>
-              <h1 style={styles.title}>Aurora Loja Maçônica</h1>
+              <h1 style={styles.title}>Login da loja • Aurora Loja Maçônica</h1>
 
               <p style={styles.description}>
-                Plataforma institucional restrita para a organização da loja, com acesso por login,
-                separação de áreas por perfil, leitura protegida e crescimento seguro em padrão
-                verde premium.
+                Entrada simples para ambiente restrito da loja, com leitura de plano, status e
+                papel do usuário. Esta etapa prepara o controle de acesso sem complicar o sistema.
               </p>
 
               <div style={styles.actions}>
-                <Link href="/irmaos" style={styles.primaryButton}>
-                  Entrar no painel dos irmãos
-                </Link>
-
-                <Link href="/irmaos/familia" style={styles.secondaryButton}>
-                  Abrir área família
+                <Link href="/" style={styles.primaryButton}>
+                  Voltar à home
                 </Link>
 
                 <Link href="/como-usar" style={styles.secondaryButton}>
                   Como usar a plataforma
                 </Link>
 
-                {sessaoLogada ? (
-                  <a href="/memorial-aurora.txt" download style={styles.secondaryButton}>
-                    Baixar memorial
-                  </a>
-                ) : (
-                  <Link href="/login" style={styles.secondaryButton}>
-                    Login para downloads
-                  </Link>
-                )}
+                <Link href="/irmaos" style={styles.secondaryButton}>
+                  Ir para irmãos
+                </Link>
               </div>
 
               <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta plataforma está evoluindo em
-                etapas seguras, preservando a estabilidade do que já foi publicado.
+                <strong>Sistema em constante atualização.</strong> Esta tela de login é uma base
+                segura inicial para o controle restrito da loja, preparada para evoluir depois sem
+                quebrar o que já funciona.
               </div>
             </div>
 
             <aside style={styles.sidePanel}>
               <div style={styles.profileCard}>
-                <div style={styles.profileHeader}>Leitura geral da loja</div>
+                <div style={styles.profileHeader}>Leitura do acesso padrão</div>
 
-                <div style={styles.profileName}>{acesso.loja}</div>
+                <div style={styles.profileName}>{perfilPadrao.nomeLoja}</div>
 
                 <div style={styles.pillRow}>
-                  <span style={styles.pillDark}>{acesso.plano}</span>
-                  <span style={styles.pillLight}>{acesso.status}</span>
-                  <span style={styles.pillLight}>{acesso.role}</span>
+                  <span style={styles.pillDark}>{leitura.plano}</span>
+                  <span style={styles.pillLight}>{leitura.status}</span>
+                  <span style={styles.pillLight}>{leitura.role}</span>
                 </div>
 
                 <div style={styles.infoGrid}>
                   <div style={styles.infoItem}>
                     <span style={styles.infoLabel}>Login principal</span>
-                    <strong style={styles.infoValue}>{perfil.login}</strong>
+                    <strong style={styles.infoValue}>{perfilPadrao.login}</strong>
                   </div>
 
                   <div style={styles.infoItem}>
                     <span style={styles.infoLabel}>Plano</span>
-                    <strong style={styles.infoValue}>{acesso.plano}</strong>
+                    <strong style={styles.infoValue}>{leitura.plano}</strong>
                   </div>
 
                   <div style={styles.infoItem}>
                     <span style={styles.infoLabel}>Status</span>
-                    <strong style={styles.infoValue}>{acesso.status}</strong>
+                    <strong style={styles.infoValue}>{leitura.status}</strong>
                   </div>
 
                   <div style={styles.infoItem}>
                     <span style={styles.infoLabel}>Acesso</span>
                     <strong style={styles.infoValue}>
-                      {acesso.acessoLiberado ? "Liberado" : "Bloqueado"}
+                      {leitura.acessoLiberado ? "Liberado" : "Bloqueado"}
                     </strong>
                   </div>
                 </div>
@@ -172,98 +217,120 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section style={styles.metricGrid}>
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Loja</span>
-            <strong style={styles.metricValue}>Restrita</strong>
-            <span style={styles.metricHint}>Uso interno com acesso controlado</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Plano atual</span>
-            <strong style={styles.metricValue}>{acesso.plano}</strong>
-            <span style={styles.metricHint}>Sua loja pode permanecer em cortesia</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Módulos liberados</span>
-            <strong style={styles.metricValue}>4</strong>
-            <span style={styles.metricHint}>Família, histórico, documentos e agenda</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Downloads</span>
-            <strong style={styles.metricValue}>{sessaoLogada ? "Protegidos" : "Sob login"}</strong>
-            <span style={styles.metricHint}>
-              {sessaoLogada
-                ? "Downloads liberados somente com sessão autenticada"
-                : "Faça login para liberar materiais internos"}
-            </span>
-          </article>
-        </section>
+        {(mensagem || erro) && (
+          <section
+            style={{
+              ...styles.feedback,
+              ...(erro ? styles.feedbackError : styles.feedbackSuccess),
+            }}
+          >
+            {erro || mensagem}
+          </section>
+        )}
 
         <section style={styles.contentGrid}>
           <article style={styles.mainCard}>
             <div style={styles.sectionHeader}>
               <div>
-                <h2 style={styles.sectionTitle}>Áreas principais</h2>
+                <h2 style={styles.sectionTitle}>Entrar na loja</h2>
                 <p style={styles.sectionSubtitle}>
-                  Navegação rápida para as áreas institucionais já prontas.
+                  Login simples com nome da loja, login principal e senha provisória para esta fase
+                  inicial.
                 </p>
               </div>
 
-              <div style={styles.sectionTag}>Acesso interno</div>
+              <div style={styles.sectionTag}>Acesso</div>
             </div>
 
-            <div style={styles.cardsGrid}>
-              {AREAS.map((item) => (
-                <Link key={item.titulo} href={item.href} style={styles.accessCard}>
-                  <div style={styles.accessTop}>
-                    <div style={styles.accessTitle}>{item.titulo}</div>
-                    <div style={styles.statusPill}>{item.status}</div>
-                  </div>
+            <form onSubmit={entrar} style={styles.form}>
+              <div style={styles.formGrid}>
+                <label style={styles.field}>
+                  <span style={styles.label}>Nome da loja</span>
+                  <input
+                    value={nomeLoja}
+                    onChange={(e) => setNomeLoja(e.target.value)}
+                    placeholder="Ex.: Loja Maçônica Aurora"
+                    style={styles.input}
+                  />
+                </label>
 
-                  <p style={styles.accessDescription}>{item.descricao}</p>
+                <label style={styles.field}>
+                  <span style={styles.label}>Login</span>
+                  <input
+                    value={login}
+                    onChange={(e) => setLogin(e.target.value)}
+                    placeholder="Ex.: email principal"
+                    style={styles.input}
+                  />
+                </label>
 
-                  <div style={styles.accessFooter}>Abrir área</div>
-                </Link>
-              ))}
-            </div>
+                <label style={{ ...styles.field, gridColumn: "1 / -1" }}>
+                  <span style={styles.label}>Senha</span>
+                  <input
+                    type="password"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    placeholder="Senha provisória inicial"
+                    style={styles.input}
+                  />
+                </label>
+              </div>
+
+              <label style={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={lembrar}
+                  onChange={(e) => setLembrar(e.target.checked)}
+                />
+                <span style={styles.checkboxLabel}>Salvar sessão local neste dispositivo</span>
+              </label>
+
+              <div style={styles.actionRow}>
+                <button type="submit" style={styles.buttonPrimary} disabled={enviando}>
+                  {enviando ? "Entrando..." : "Entrar"}
+                </button>
+
+                <button type="button" style={styles.buttonSecondary} onClick={sairSessao}>
+                  Encerrar sessão
+                </button>
+              </div>
+            </form>
           </article>
 
           <aside style={styles.sideColumn}>
             <article style={styles.sideCard}>
               <div style={styles.sectionHeader}>
                 <div>
-                  <h2 style={styles.sectionTitle}>Modelo de plano</h2>
+                  <h2 style={styles.sectionTitle}>Sessão atual</h2>
                   <p style={styles.sectionSubtitle}>
-                    Estrutura simples para cortesia, teste e acesso ativo sem complicar o app.
+                    Leitura da sessão local preparada para a loja.
                   </p>
                 </div>
 
-                <div style={styles.sectionTag}>Planos</div>
+                <div style={styles.sectionTag}>
+                  {sessao?.autenticado ? "Ativa" : "Sem sessão"}
+                </div>
               </div>
 
               <div style={styles.readingStack}>
                 <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Cortesia</strong>
-                  <p style={styles.readingText}>
-                    Ideal para sua loja, mantendo uso livre sem cobrança neste momento.
-                  </p>
+                  <strong style={styles.readingTitle}>Nome da loja</strong>
+                  <p style={styles.readingText}>{sessao?.nomeLoja || "Sem leitura de sessão"}</p>
                 </div>
 
                 <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Teste</strong>
-                  <p style={styles.readingText}>
-                    Permite liberar algumas lojas para teste real antes da fase de cobrança.
-                  </p>
+                  <strong style={styles.readingTitle}>Plano</strong>
+                  <p style={styles.readingText}>{sessao?.plano || "Sem plano carregado"}</p>
                 </div>
 
                 <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Ativo</strong>
-                  <p style={styles.readingText}>
-                    Base pronta para quando você quiser cobrar acesso no futuro.
-                  </p>
+                  <strong style={styles.readingTitle}>Status</strong>
+                  <p style={styles.readingText}>{sessao?.status || "Sem status carregado"}</p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Papel</strong>
+                  <p style={styles.readingText}>{sessao?.role || "Sem papel carregado"}</p>
                 </div>
               </div>
             </article>
@@ -271,24 +338,37 @@ export default function HomePage() {
             <article style={styles.sideCard}>
               <div style={styles.sectionHeader}>
                 <div>
-                  <h2 style={styles.sectionTitle}>Próximo passo</h2>
+                  <h2 style={styles.sectionTitle}>Leitura institucional</h2>
                   <p style={styles.sectionSubtitle}>
-                    Agora que o login geral foi preparado, o próximo passo é ligar isso a uma tela
-                    real de autenticação simples da loja.
+                    Modelo simples para cortesia, teste e expansão futura do acesso.
                   </p>
                 </div>
 
-                <div style={styles.sectionTag}>Continuar</div>
+                <div style={styles.sectionTag}>Base pronta</div>
               </div>
 
-              <div style={styles.quickLinks}>
-                <Link href="/irmaos" style={styles.quickLink}>
-                  Abrir painel
-                </Link>
+              <div style={styles.readingStack}>
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Cortesia</strong>
+                  <p style={styles.readingText}>
+                    Sua loja pode continuar com acesso em cortesia sem cobrança por agora.
+                  </p>
+                </div>
 
-                <Link href="/irmaos/agenda" style={styles.quickLinkSecondary}>
-                  Abrir agenda
-                </Link>
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Teste</strong>
+                  <p style={styles.readingText}>
+                    Outras lojas podem ser liberadas depois em plano de teste sem complicar o app.
+                  </p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Senha provisória</strong>
+                  <p style={styles.readingText}>
+                    Nesta fase inicial, a senha provisória pode ser simples e depois nós trocamos
+                    por autenticação real mais forte.
+                  </p>
+                </div>
               </div>
             </article>
           </aside>
@@ -519,38 +599,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     wordBreak: "break-word",
   },
-  metricGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 16,
-    marginBottom: 22,
+  feedback: {
+    marginBottom: 18,
+    padding: "14px 16px",
+    borderRadius: 18,
+    fontSize: 14,
+    fontWeight: 800,
   },
-  metricCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 24,
-    padding: 20,
-    boxShadow: "0 16px 45px rgba(6,78,59,0.06)",
-    display: "grid",
-    gap: 8,
+  feedbackSuccess: {
+    background: "rgba(22,163,74,0.10)",
+    border: "1px solid rgba(22,163,74,0.16)",
+    color: "#166534",
   },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: "#4d6b5b",
-  },
-  metricValue: {
-    fontSize: 30,
-    lineHeight: 1,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  metricHint: {
-    fontSize: 13,
-    color: "#5d786a",
-    lineHeight: 1.55,
+  feedbackError: {
+    background: "rgba(239,68,68,0.10)",
+    border: "1px solid rgba(239,68,68,0.18)",
+    color: "#991b1b",
   },
   contentGrid: {
     display: "grid",
@@ -610,55 +674,72 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     whiteSpace: "nowrap",
   },
-  cardsGrid: {
+  form: {
+    display: "grid",
+    gap: 18,
+  },
+  formGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 16,
   },
-  accessCard: {
+  field: {
     display: "grid",
-    gap: 12,
-    textDecoration: "none",
-    padding: 18,
-    borderRadius: 22,
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
-    border: "1px solid rgba(134,239,172,0.20)",
-    boxShadow: "0 14px 34px rgba(6,78,59,0.05)",
-    color: "inherit",
+    gap: 8,
   },
-  accessTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  accessTitle: {
-    fontSize: 20,
-    lineHeight: 1.15,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  statusPill: {
-    display: "inline-flex",
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(22,163,74,0.14)",
-    whiteSpace: "nowrap",
-  },
-  accessDescription: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#355244",
-  },
-  accessFooter: {
+  label: {
     fontSize: 13,
+    fontWeight: 800,
+    color: "#274637",
+  },
+  input: {
+    width: "100%",
+    minHeight: 50,
+    borderRadius: 16,
+    border: "1px solid rgba(134,239,172,0.22)",
+    background: "#ffffff",
+    padding: "0 14px",
+    fontSize: 15,
+    color: "#10231a",
+    boxSizing: "border-box",
+    outline: "none",
+  },
+  checkboxRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: "#355244",
+    fontWeight: 700,
+  },
+  actionRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  buttonPrimary: {
+    minHeight: 48,
+    padding: "0 18px",
+    borderRadius: 16,
+    border: "none",
+    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
+    color: "#ffffff",
     fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 16px 35px rgba(22,163,74,0.20)",
+  },
+  buttonSecondary: {
+    minHeight: 48,
+    padding: "0 18px",
+    borderRadius: 16,
+    border: "1px solid rgba(134,239,172,0.24)",
+    background: "#ffffff",
     color: "#14532d",
+    fontWeight: 800,
+    cursor: "pointer",
   },
   readingStack: {
     display: "grid",
@@ -682,36 +763,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     lineHeight: 1.7,
     color: "#4f6c5e",
-  },
-  quickLinks: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  quickLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
-    color: "#ffffff",
-    fontWeight: 900,
-    boxShadow: "0 16px 35px rgba(22,163,74,0.18)",
-  },
-  quickLinkSecondary: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "#ffffff",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.18)",
-    fontWeight: 800,
   },
 };

@@ -2,11 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  LOJA_ACESSO_CORTESIA_PADRAO,
-  criarPerfilLojaSimples,
-  resumoAcesso,
-} from "@/lib/loja-access";
 
 const STORAGE_KEY = "aurora-loja-maconica-auth";
 
@@ -20,48 +15,58 @@ type SessaoLoja = {
   acessoLiberado: boolean;
 };
 
-const perfil = criarPerfilLojaSimples(LOJA_ACESSO_CORTESIA_PADRAO);
-const acesso = resumoAcesso(perfil);
-
-const AREAS = [
+const PASSOS = [
   {
-    titulo: "Irmãos",
+    numero: "01",
+    titulo: "Acesso ao sistema",
     descricao:
-      "Painel central do irmão com acesso às áreas de família, histórico, documentos e agenda.",
-    href: "/irmaos",
-    status: "Liberado",
+      "O acesso é feito pela tela de login da loja. Nesta fase inicial, utilizamos uma base simples, segura e preparada para evoluir sem quebrar o que já está funcionando.",
   },
   {
-    titulo: "Família",
+    numero: "02",
+    titulo: "Entrada na área institucional",
     descricao:
-      "Cadastro familiar protegido com memória social, observações institucionais e leitura elegante.",
-    href: "/irmaos/familia",
-    status: "Liberado",
+      "Após o login, o sistema pode reconhecer o perfil institucional, o papel do usuário, o status da loja e a estrutura liberada para uso.",
   },
   {
-    titulo: "Histórico maçônico",
+    numero: "03",
+    titulo: "Organização por módulos",
     descricao:
-      "Trajetória do irmão com graus, cargos, marcos importantes, eventos e observações institucionais.",
-    href: "/irmaos/historico",
-    status: "Liberado",
+      "Cada área possui uma função clara: irmãos, família, histórico, agenda, documentos, lançamentos, financeiro e relatórios. Isso evita desorganização e melhora o controle.",
   },
   {
-    titulo: "Documentos e downloads",
+    numero: "04",
+    titulo: "Registro e memória da loja",
     descricao:
-      "Espaço para fichas, comprovantes, atas, declarações e cópias locais seguras.",
-    href: "/irmaos/documentos",
-    status: "Liberado",
+      "A plataforma permite preservar informações importantes, fortalecer a memória institucional e manter uma base organizada para continuidade administrativa.",
   },
   {
-    titulo: "Agenda e lembretes",
+    numero: "05",
+    titulo: "Gestão contínua e crescimento",
     descricao:
-      "Reuniões, solenidades, aniversários e compromissos importantes da rotina institucional.",
-    href: "/irmaos/agenda",
-    status: "Liberado",
+      "Com o uso contínuo, a loja ganha mais clareza, mais segurança, mais padrão institucional e uma base preparada para crescer com estabilidade.",
   },
 ];
 
-export default function HomePage() {
+const BLOCOS = [
+  {
+    titulo: "Organização institucional",
+    texto:
+      "A Aurora Loja Maçônica foi pensada para centralizar áreas importantes em um ambiente sério, elegante e protegido, reduzindo improvisos e fortalecendo a rotina administrativa.",
+  },
+  {
+    titulo: "Memória e continuidade",
+    texto:
+      "Além da gestão atual, o sistema ajuda a preservar registros, famílias, histórico, documentos e movimentos institucionais ao longo do tempo.",
+  },
+  {
+    titulo: "Apresentação e valor",
+    texto:
+      "A plataforma também serve como vitrine de organização, modernidade e cuidado institucional, ajudando na percepção de valor e na apresentação comercial.",
+  },
+];
+
+export default function ComoUsarPage() {
   const [sessaoLogada, setSessaoLogada] = useState(false);
 
   useEffect(() => {
@@ -88,35 +93,35 @@ export default function HomePage() {
       <section style={styles.container}>
         <header style={styles.hero}>
           <div style={styles.heroTop}>
-            <div style={styles.badge}>Sistema restrito da loja com acesso controlado</div>
+            <div style={styles.badge}>Guia institucional e comercial</div>
             <div style={styles.miniBadge}>Aurora Loja Maçônica</div>
           </div>
 
           <div style={styles.heroGrid}>
             <div style={styles.heroMain}>
-              <h1 style={styles.title}>Aurora Loja Maçônica</h1>
+              <h1 style={styles.title}>Como usar a Aurora Loja Maçônica</h1>
 
               <p style={styles.description}>
-                Plataforma institucional restrita para a organização da loja, com acesso por login,
-                separação de áreas por perfil, leitura protegida e crescimento seguro em padrão
-                verde premium.
+                Entenda de forma clara como funciona a plataforma institucional da loja, desde o
+                acesso inicial até a organização administrativa, a preservação da memória e a
+                evolução segura do sistema.
               </p>
 
               <div style={styles.actions}>
-                <Link href="/irmaos" style={styles.primaryButton}>
-                  Entrar no painel dos irmãos
+                <Link href="/" style={styles.primaryButton}>
+                  Voltar à home
                 </Link>
 
-                <Link href="/irmaos/familia" style={styles.secondaryButton}>
-                  Abrir área família
+                <Link href="/login" style={styles.secondaryButton}>
+                  Ir para login
                 </Link>
 
-                <Link href="/como-usar" style={styles.secondaryButton}>
-                  Como usar a plataforma
+                <Link href="/irmaos" style={styles.secondaryButton}>
+                  Abrir painel dos irmãos
                 </Link>
 
                 {sessaoLogada ? (
-                  <a href="/memorial-aurora.txt" download style={styles.secondaryButton}>
+                  <a href="/api/download/memorial" style={styles.secondaryButton}>
                     Baixar memorial
                   </a>
                 ) : (
@@ -127,44 +132,47 @@ export default function HomePage() {
               </div>
 
               <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta plataforma está evoluindo em
-                etapas seguras, preservando a estabilidade do que já foi publicado.
+                <strong>Sistema em constante atualização.</strong> Esta página foi preparada para
+                explicar a plataforma com clareza, gerar confiança institucional e apoiar a
+                apresentação comercial da solução.
               </div>
             </div>
 
             <aside style={styles.sidePanel}>
               <div style={styles.profileCard}>
-                <div style={styles.profileHeader}>Leitura geral da loja</div>
+                <div style={styles.profileHeader}>Visão geral da proposta</div>
 
-                <div style={styles.profileName}>{acesso.loja}</div>
+                <div style={styles.profileName}>Plataforma institucional premium</div>
 
                 <div style={styles.pillRow}>
-                  <span style={styles.pillDark}>{acesso.plano}</span>
-                  <span style={styles.pillLight}>{acesso.status}</span>
-                  <span style={styles.pillLight}>{acesso.role}</span>
+                  <span style={styles.pillDark}>Organização</span>
+                  <span style={styles.pillLight}>Memória</span>
+                  <span style={styles.pillLight}>Gestão</span>
                 </div>
 
                 <div style={styles.infoGrid}>
                   <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Login principal</span>
-                    <strong style={styles.infoValue}>{perfil.login}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Plano</span>
-                    <strong style={styles.infoValue}>{acesso.plano}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Status</span>
-                    <strong style={styles.infoValue}>{acesso.status}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Acesso</span>
+                    <span style={styles.infoLabel}>Foco principal</span>
                     <strong style={styles.infoValue}>
-                      {acesso.acessoLiberado ? "Liberado" : "Bloqueado"}
+                      Organização da loja com acesso protegido
                     </strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>Benefício institucional</span>
+                    <strong style={styles.infoValue}>
+                      Mais clareza, continuidade e controle
+                    </strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>Base preparada</span>
+                    <strong style={styles.infoValue}>Celular, PC e expansão futura</strong>
+                  </div>
+
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>Apresentação</span>
+                    <strong style={styles.infoValue}>Visual sério, elegante e comercial</strong>
                   </div>
                 </div>
               </div>
@@ -174,31 +182,27 @@ export default function HomePage() {
 
         <section style={styles.metricGrid}>
           <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Loja</span>
-            <strong style={styles.metricValue}>Restrita</strong>
-            <span style={styles.metricHint}>Uso interno com acesso controlado</span>
+            <span style={styles.metricLabel}>Guia</span>
+            <strong style={styles.metricValue}>Completo</strong>
+            <span style={styles.metricHint}>Explica o funcionamento em etapas claras</span>
           </article>
 
           <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Plano atual</span>
-            <strong style={styles.metricValue}>{acesso.plano}</strong>
-            <span style={styles.metricHint}>Sua loja pode permanecer em cortesia</span>
+            <span style={styles.metricLabel}>Estrutura</span>
+            <strong style={styles.metricValue}>Modular</strong>
+            <span style={styles.metricHint}>Cada área com função institucional definida</span>
           </article>
 
           <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Módulos liberados</span>
-            <strong style={styles.metricValue}>4</strong>
-            <span style={styles.metricHint}>Família, histórico, documentos e agenda</span>
+            <span style={styles.metricLabel}>Memória</span>
+            <strong style={styles.metricValue}>Protegida</strong>
+            <span style={styles.metricHint}>Histórico e registros organizados com segurança</span>
           </article>
 
           <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Downloads</span>
-            <strong style={styles.metricValue}>{sessaoLogada ? "Protegidos" : "Sob login"}</strong>
-            <span style={styles.metricHint}>
-              {sessaoLogada
-                ? "Downloads liberados somente com sessão autenticada"
-                : "Faça login para liberar materiais internos"}
-            </span>
+            <span style={styles.metricLabel}>Venda</span>
+            <strong style={styles.metricValue}>Forte</strong>
+            <span style={styles.metricHint}>Página feita para explicar e valorizar a solução</span>
           </article>
         </section>
 
@@ -206,27 +210,25 @@ export default function HomePage() {
           <article style={styles.mainCard}>
             <div style={styles.sectionHeader}>
               <div>
-                <h2 style={styles.sectionTitle}>Áreas principais</h2>
+                <h2 style={styles.sectionTitle}>Passo a passo de uso</h2>
                 <p style={styles.sectionSubtitle}>
-                  Navegação rápida para as áreas institucionais já prontas.
+                  Leitura simples para entender como a plataforma funciona no dia a dia.
                 </p>
               </div>
 
-              <div style={styles.sectionTag}>Acesso interno</div>
+              <div style={styles.sectionTag}>Guia prático</div>
             </div>
 
-            <div style={styles.cardsGrid}>
-              {AREAS.map((item) => (
-                <Link key={item.titulo} href={item.href} style={styles.accessCard}>
-                  <div style={styles.accessTop}>
-                    <div style={styles.accessTitle}>{item.titulo}</div>
-                    <div style={styles.statusPill}>{item.status}</div>
+            <div style={styles.stepsGrid}>
+              {PASSOS.map((passo) => (
+                <article key={passo.numero} style={styles.stepCard}>
+                  <div style={styles.stepNumber}>{passo.numero}</div>
+
+                  <div style={styles.stepContent}>
+                    <h3 style={styles.stepTitle}>{passo.titulo}</h3>
+                    <p style={styles.stepDescription}>{passo.descricao}</p>
                   </div>
-
-                  <p style={styles.accessDescription}>{item.descricao}</p>
-
-                  <div style={styles.accessFooter}>Abrir área</div>
-                </Link>
+                </article>
               ))}
             </div>
           </article>
@@ -235,59 +237,67 @@ export default function HomePage() {
             <article style={styles.sideCard}>
               <div style={styles.sectionHeader}>
                 <div>
-                  <h2 style={styles.sectionTitle}>Modelo de plano</h2>
+                  <h2 style={styles.sectionTitle}>Por que essa plataforma existe</h2>
                   <p style={styles.sectionSubtitle}>
-                    Estrutura simples para cortesia, teste e acesso ativo sem complicar o app.
+                    Mais do que tecnologia, ela organiza, preserva e fortalece a estrutura da loja.
                   </p>
                 </div>
 
-                <div style={styles.sectionTag}>Planos</div>
+                <div style={styles.sectionTag}>Institucional</div>
               </div>
 
               <div style={styles.readingStack}>
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Cortesia</strong>
-                  <p style={styles.readingText}>
-                    Ideal para sua loja, mantendo uso livre sem cobrança neste momento.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Teste</strong>
-                  <p style={styles.readingText}>
-                    Permite liberar algumas lojas para teste real antes da fase de cobrança.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Ativo</strong>
-                  <p style={styles.readingText}>
-                    Base pronta para quando você quiser cobrar acesso no futuro.
-                  </p>
-                </div>
+                {BLOCOS.map((bloco) => (
+                  <div key={bloco.titulo} style={styles.readingItem}>
+                    <strong style={styles.readingTitle}>{bloco.titulo}</strong>
+                    <p style={styles.readingText}>{bloco.texto}</p>
+                  </div>
+                ))}
               </div>
             </article>
 
             <article style={styles.sideCard}>
               <div style={styles.sectionHeader}>
                 <div>
-                  <h2 style={styles.sectionTitle}>Próximo passo</h2>
+                  <h2 style={styles.sectionTitle}>Próximos movimentos</h2>
                   <p style={styles.sectionSubtitle}>
-                    Agora que o login geral foi preparado, o próximo passo é ligar isso a uma tela
-                    real de autenticação simples da loja.
+                    A base já está pronta para ficar ainda mais forte em apresentação e operação.
                   </p>
                 </div>
 
-                <div style={styles.sectionTag}>Continuar</div>
+                <div style={styles.sectionTag}>Expansão</div>
+              </div>
+
+              <div style={styles.readingStack}>
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Login mais robusto</strong>
+                  <p style={styles.readingText}>
+                    Evoluir da base atual para autenticação mais forte sem quebrar o sistema.
+                  </p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Memorial institucional completo</strong>
+                  <p style={styles.readingText}>
+                    Transformar esta explicação em um memorial ainda mais comercial e encantador.
+                  </p>
+                </div>
+
+                <div style={styles.readingItem}>
+                  <strong style={styles.readingTitle}>Material para venda</strong>
+                  <p style={styles.readingText}>
+                    Criar versão pronta para apresentação comercial, PDF e abordagem de novas lojas.
+                  </p>
+                </div>
               </div>
 
               <div style={styles.quickLinks}>
-                <Link href="/irmaos" style={styles.quickLink}>
-                  Abrir painel
+                <Link href="/" style={styles.quickLink}>
+                  Voltar à home
                 </Link>
 
-                <Link href="/irmaos/agenda" style={styles.quickLinkSecondary}>
-                  Abrir agenda
+                <Link href="/login" style={styles.quickLinkSecondary}>
+                  Abrir login
                 </Link>
               </div>
             </article>
@@ -610,55 +620,50 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     whiteSpace: "nowrap",
   },
-  cardsGrid: {
+  stepsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 16,
   },
-  accessCard: {
+  stepCard: {
     display: "grid",
-    gap: 12,
-    textDecoration: "none",
+    gridTemplateColumns: "90px 1fr",
+    gap: 16,
+    alignItems: "stretch",
     padding: 18,
     borderRadius: 22,
     background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
     border: "1px solid rgba(134,239,172,0.20)",
     boxShadow: "0 14px 34px rgba(6,78,59,0.05)",
-    color: "inherit",
   },
-  accessTop: {
+  stepNumber: {
     display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
+    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: 900,
+    minHeight: 86,
+    boxShadow: "0 16px 35px rgba(22,163,74,0.18)",
   },
-  accessTitle: {
-    fontSize: 20,
-    lineHeight: 1.15,
+  stepContent: {
+    display: "grid",
+    alignContent: "center",
+    gap: 8,
+  },
+  stepTitle: {
+    margin: 0,
+    fontSize: 21,
+    lineHeight: 1.1,
     fontWeight: 900,
     color: "#10231a",
   },
-  statusPill: {
-    display: "inline-flex",
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(22,163,74,0.14)",
-    whiteSpace: "nowrap",
-  },
-  accessDescription: {
+  stepDescription: {
     margin: 0,
     fontSize: 14,
-    lineHeight: 1.7,
+    lineHeight: 1.8,
     color: "#355244",
-  },
-  accessFooter: {
-    fontSize: 13,
-    fontWeight: 900,
-    color: "#14532d",
   },
   readingStack: {
     display: "grid",
@@ -687,6 +692,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexWrap: "wrap",
     gap: 12,
+    marginTop: 18,
   },
   quickLink: {
     display: "inline-flex",

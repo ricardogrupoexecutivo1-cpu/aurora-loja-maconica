@@ -15,8 +15,65 @@ type FormState = {
   mensagem_institucional: string;
 };
 
+type LojaPayload = {
+  id: string;
+  slug: string | null;
+  nome_loja: string | null;
+  responsavel_nome: string | null;
+  responsavel_email: string | null;
+  responsavel_whatsapp: string | null;
+  cidade: string | null;
+  estado: string | null;
+  mensagem_institucional: string | null;
+  configuracao_concluida: boolean;
+  status: string | null;
+  plano: string | null;
+  courtesy_expires_at: string | null;
+};
+
+type ApiResponse = {
+  success: boolean;
+  message?: string;
+  loja?: LojaPayload | null;
+};
+
 const STORAGE_KEY_ID = "aurora_loja_id";
 const STORAGE_KEY_SLUG = "aurora_loja_slug";
+const STORAGE_KEY_NOME = "aurora_loja_nome";
+const STORAGE_KEY_EMAIL = "aurora_loja_responsavel_email";
+
+const LOJA_ID_FIXA = "36dbb2e4-d499-44d3-b3e1-313c0f41993e";
+
+function formatarPlano(plano: string | null | undefined) {
+  if (!plano) return "Cortesia";
+  return plano.charAt(0).toUpperCase() + plano.slice(1).toLowerCase();
+}
+
+function formatarStatus(status: string | null | undefined) {
+  if (!status) return "Em atualização";
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+function formatarValidade(data: string | null | undefined) {
+  if (!data) return "";
+  const parsed = new Date(data);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+  }).format(parsed);
+}
+
+function montarUrlBuscaLoja() {
+  if (typeof window === "undefined") {
+    return `/api/lojas/configurar?id=${LOJA_ID_FIXA}`;
+  }
+
+  const lojaId =
+    window.localStorage.getItem(STORAGE_KEY_ID)?.trim() || LOJA_ID_FIXA;
+
+  return `/api/lojas/configurar?id=${encodeURIComponent(lojaId)}`;
+}
 
 function ConfigurarLojaConteudo() {
   const searchParams = useSearchParams();
@@ -43,13 +100,15 @@ function ConfigurarLojaConteudo() {
       estado: "",
       mensagem_institucional: "",
     }),
-    []
+    [],
   );
 
   const [form, setForm] = useState<FormState>(estadoInicial);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
+  const [carregandoLoja, setCarregandoLoja] = useState(true);
+  const [lojaAtual, setLojaAtual] = useState<LojaPayload | null>(null);
 
   useEffect(() => {
     const idUrl = searchParams.get("id")?.trim() || "";
@@ -69,6 +128,89 @@ function ConfigurarLojaConteudo() {
       slug: slugUrl || atual.slug || slugLocal,
     }));
   }, [searchParams]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarLoja() {
+      try {
+        setCarregandoLoja(true);
+
+        const response = await fetch(montarUrlBuscaLoja(), {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Falha ao carregar a loja. Status: ${response.status}`);
+        }
+
+        const json = (await response.json()) as ApiResponse;
+
+        if (!ativo) return;
+
+        if (json.success && json.loja?.id) {
+          const loja = json.loja;
+
+          setLojaAtual(loja);
+
+          setForm((atual) => ({
+            ...atual,
+            id: loja.id ?? atual.id,
+            slug: loja.slug ?? atual.slug,
+            nome_loja: loja.nome_loja ?? atual.nome_loja,
+            responsavel_nome: loja.responsavel_nome ?? atual.responsavel_nome,
+            responsavel_email:
+              loja.responsavel_email ?? atual.responsavel_email,
+            responsavel_whatsapp:
+              loja.responsavel_whatsapp ?? atual.responsavel_whatsapp,
+            cidade: loja.cidade ?? atual.cidade,
+            estado: loja.estado ?? atual.estado,
+            mensagem_institucional:
+              loja.mensagem_institucional ?? atual.mensagem_institucional,
+          }));
+
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(STORAGE_KEY_ID, loja.id);
+            if (loja.slug) {
+              window.localStorage.setItem(STORAGE_KEY_SLUG, loja.slug);
+            }
+            if (loja.nome_loja) {
+              window.localStorage.setItem(STORAGE_KEY_NOME, loja.nome_loja);
+            }
+            if (loja.responsavel_email) {
+              window.localStorage.setItem(
+                STORAGE_KEY_EMAIL,
+                loja.responsavel_email,
+              );
+            }
+          }
+        }
+      } catch (err) {
+        if (!ativo) return;
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Não foi possível carregar os dados atuais da loja.";
+
+        setErro(message);
+      } finally {
+        if (ativo) {
+          setCarregandoLoja(false);
+        }
+      }
+    }
+
+    void carregarLoja();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   function atualizarCampo(campo: keyof FormState, valor: string) {
     setForm((atual) => ({
@@ -95,7 +237,7 @@ function ConfigurarLojaConteudo() {
 
       if (!response.ok || !json?.success) {
         throw new Error(
-          json?.message || "Não foi possível salvar a configuração inicial."
+          json?.message || "Não foi possível salvar a configuração inicial.",
         );
       }
 
@@ -106,11 +248,40 @@ function ConfigurarLojaConteudo() {
         if (form.slug.trim()) {
           window.localStorage.setItem(STORAGE_KEY_SLUG, form.slug.trim());
         }
+        if (form.nome_loja.trim()) {
+          window.localStorage.setItem(STORAGE_KEY_NOME, form.nome_loja.trim());
+        }
+        if (form.responsavel_email.trim()) {
+          window.localStorage.setItem(
+            STORAGE_KEY_EMAIL,
+            form.responsavel_email.trim(),
+          );
+        }
       }
 
       setMensagem(
-        "Configuração inicial salva com sucesso. Sua cortesia automática permanece ativa por até 90 dias."
+        "Configuração inicial salva com sucesso. A base institucional da loja foi atualizada e permanece pronta para uso seguro.",
       );
+
+      setLojaAtual((atual) => ({
+        id: form.id || atual?.id || LOJA_ID_FIXA,
+        slug: form.slug || atual?.slug || null,
+        nome_loja: form.nome_loja || atual?.nome_loja || null,
+        responsavel_nome:
+          form.responsavel_nome || atual?.responsavel_nome || null,
+        responsavel_email:
+          form.responsavel_email || atual?.responsavel_email || null,
+        responsavel_whatsapp:
+          form.responsavel_whatsapp || atual?.responsavel_whatsapp || null,
+        cidade: form.cidade || atual?.cidade || null,
+        estado: form.estado || atual?.estado || null,
+        mensagem_institucional:
+          form.mensagem_institucional || atual?.mensagem_institucional || null,
+        configuracao_concluida: true,
+        status: atual?.status || "ativa",
+        plano: atual?.plano || "premium",
+        courtesy_expires_at: atual?.courtesy_expires_at || null,
+      }));
     } catch (err) {
       const message =
         err instanceof Error
@@ -122,6 +293,83 @@ function ConfigurarLojaConteudo() {
       setSalvando(false);
     }
   }
+
+  const planoAtual = useMemo(() => {
+    return formatarPlano(lojaAtual?.plano);
+  }, [lojaAtual?.plano]);
+
+  const statusAtual = useMemo(() => {
+    return formatarStatus(lojaAtual?.status);
+  }, [lojaAtual?.status]);
+
+  const tituloLiberacao = useMemo(() => {
+    if ((lojaAtual?.plano || "").toLowerCase() === "premium") {
+      return "Plano premium ativo";
+    }
+
+    if ((lojaAtual?.plano || "").toLowerCase() === "teste") {
+      return "Teste ativo";
+    }
+
+    return "Cortesia automática ativa";
+  }, [lojaAtual?.plano]);
+
+  const subtituloLiberacao = useMemo(() => {
+    if ((lojaAtual?.plano || "").toLowerCase() === "premium") {
+      return "Base premium liberada";
+    }
+
+    if ((lojaAtual?.plano || "").toLowerCase() === "teste") {
+      return "Ambiente de teste liberado";
+    }
+
+    if (lojaAtual?.courtesy_expires_at) {
+      const dataFormatada = formatarValidade(lojaAtual.courtesy_expires_at);
+      return dataFormatada
+        ? `Cortesia válida até ${dataFormatada}`
+        : "Cortesia inicial liberada";
+    }
+
+    return "Até 90 dias liberados";
+  }, [lojaAtual?.plano, lojaAtual?.courtesy_expires_at]);
+
+  const textoEntrada = useMemo(() => {
+    if ((lojaAtual?.plano || "").toLowerCase() === "premium") {
+      return "Sua loja já está com plano premium ativo. Esta etapa serve para completar, revisar e fortalecer a base institucional com leitura elegante e uso seguro.";
+    }
+
+    if ((lojaAtual?.plano || "").toLowerCase() === "teste") {
+      return "Sua loja já entrou em modo de teste ativo. Agora esta etapa serve para completar a base institucional e preparar a experiência real da plataforma.";
+    }
+
+    return "Sua loja já entrou com cortesia ativa. Agora esta etapa serve para completar a base institucional e deixar o ambiente pronto para uso organizado e elegante.";
+  }, [lojaAtual?.plano]);
+
+  const textoPlano = useMemo(() => {
+    if ((lojaAtual?.plano || "").toLowerCase() === "premium") {
+      return "Sua loja já está em plano premium, com base real conectada e ambiente preparado para crescer com estabilidade.";
+    }
+
+    if ((lojaAtual?.plano || "").toLowerCase() === "teste") {
+      return "O sistema permite fase de teste real antes da etapa definitiva, mantendo a organização institucional desde o início.";
+    }
+
+    return "O sistema foi desenhado para não travar a entrada. A loja se cadastra, recebe a liberação automática inicial e segue para a configuração com segurança.";
+  }, [lojaAtual?.plano]);
+
+  const textoPremium = useMemo(() => {
+    if ((lojaAtual?.plano || "").toLowerCase() === "premium") {
+      return "Esta etapa mantém a base premium organizada, preparada para irmãos autorizados e pronta para crescer sem perder o padrão institucional.";
+    }
+
+    return "Esta etapa prepara a loja para um ambiente bonito, organizado e pronto para encantar os irmãos com experiência institucional séria e elegante.";
+  }, [lojaAtual?.plano]);
+
+  const nomeExibicao = lojaAtual?.nome_loja?.trim() || form.nome_loja || "Loja Maçônica Aurora";
+  const localizacaoExibicao =
+    lojaAtual?.cidade && lojaAtual?.estado
+      ? `${lojaAtual.cidade} • ${lojaAtual.estado}`
+      : lojaAtual?.cidade || lojaAtual?.estado || "Uso institucional protegido";
 
   return (
     <main
@@ -188,6 +436,34 @@ function ConfigurarLojaConteudo() {
             preparar o ambiente dos irmãos e deixar a estrutura pronta para uso
             seguro no padrão premium da Aurora Loja Maçônica.
           </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              marginTop: 18,
+            }}
+          >
+            {[nomeExibicao, localizacaoExibicao, planoAtual, statusAtual].map(
+              (item) => (
+                <span
+                  key={item}
+                  style={{
+                    borderRadius: 999,
+                    padding: "8px 14px",
+                    background: "rgba(255,255,255,0.10)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#f2fbf5",
+                  }}
+                >
+                  {item}
+                </span>
+              ),
+            )}
+          </div>
         </section>
 
         <section
@@ -198,28 +474,27 @@ function ConfigurarLojaConteudo() {
             marginBottom: 24,
           }}
         >
-          {[
-            "Cortesia automática ativa",
-            "Até 90 dias liberados",
-            "Configuração segura",
-            "Uso em celular e PC",
-          ].map((item) => (
-            <div
-              key={item}
-              style={{
-                background: "#edf5ea",
-                border: `1px solid ${corBorda}`,
-                color: corTextoSuave,
-                borderRadius: 18,
-                padding: "14px 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                boxShadow: "0 8px 20px rgba(23, 77, 43, 0.05)",
-              }}
-            >
-              {item}
-            </div>
-          ))}
+          {[tituloLiberacao, subtituloLiberacao, "Configuração segura", "Uso em celular e PC"].map(
+            (item) => (
+              <div
+                key={item}
+                style={{
+                  background: "#edf5ea",
+                  border: `1px solid ${corBorda}`,
+                  color: corTextoSuave,
+                  borderRadius: 18,
+                  padding: "14px 16px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  boxShadow: "0 8px 20px rgba(23, 77, 43, 0.05)",
+                }}
+              >
+                {carregandoLoja && item === tituloLiberacao
+                  ? "Carregando plano da loja..."
+                  : item}
+              </div>
+            ),
+          )}
         </section>
 
         <section
@@ -256,9 +531,7 @@ function ConfigurarLojaConteudo() {
                 fontSize: 15,
               }}
             >
-              Sua loja já entrou com cortesia ativa. Agora esta etapa serve para
-              completar a base institucional e deixar o ambiente pronto para uso
-              organizado e elegante.
+              {textoEntrada}
             </p>
           </div>
 
@@ -279,7 +552,7 @@ function ConfigurarLojaConteudo() {
                 color: corVerdeEscuro,
               }}
             >
-              Cortesia por até 90 dias
+              {planoAtual === "Premium" ? "Base premium ativa" : "Modelo de entrada"}
             </h3>
             <p
               style={{
@@ -289,9 +562,7 @@ function ConfigurarLojaConteudo() {
                 fontSize: 15,
               }}
             >
-              O sistema foi desenhado para não travar a entrada. A loja se
-              cadastra, recebe a liberação automática inicial e segue para a
-              configuração com segurança.
+              {textoPlano}
             </p>
           </div>
 
@@ -311,7 +582,7 @@ function ConfigurarLojaConteudo() {
                 color: corVerdeEscuro,
               }}
             >
-              Base premium
+              Base institucional
             </h3>
             <p
               style={{
@@ -321,9 +592,7 @@ function ConfigurarLojaConteudo() {
                 fontSize: 15,
               }}
             >
-              Esta etapa prepara a loja para um ambiente bonito, organizado e
-              pronto para encantar os irmãos com experiência institucional séria
-              e elegante.
+              {textoPremium}
             </p>
           </div>
         </section>
@@ -366,8 +635,8 @@ function ConfigurarLojaConteudo() {
                   fontSize: 15,
                 }}
               >
-                Estruture a base institucional com cuidado para evitar
-                retrabalho e manter a loja pronta para crescer com segurança.
+                Estruture a base institucional com cuidado para evitar retrabalho
+                e manter a loja pronta para crescer com segurança.
               </p>
             </div>
 

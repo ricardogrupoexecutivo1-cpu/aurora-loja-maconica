@@ -1,371 +1,199 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { protegerPagina } from "@/lib/auth-guard";
 
-function CardResumo({
-  titulo,
-  valor,
-  destaque = false,
-}: {
+type Lancamento = {
+  id: string;
   titulo: string;
-  valor: string;
-  destaque?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        background: "#ffffff",
-        borderRadius: 22,
-        border: destaque ? "1px solid #86efac" : "1px solid #dbe4ea",
-        padding: 20,
-        boxShadow: "0 14px 36px rgba(15, 23, 42, 0.05)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "#0f766e",
-          marginBottom: 10,
-        }}
-      >
-        {titulo}
-      </div>
+  tipo: "entrada" | "saida";
+  valor: number;
+  categoria: string;
+  conta: string;
+  centroCusto: string;
+  competencia: string;
+  status: "pago" | "pendente" | "cancelado";
+  descricao?: string;
+};
 
-      <div
-        style={{
-          fontSize: 28,
-          lineHeight: 1.1,
-          fontWeight: 900,
-          color: "#0f172a",
-        }}
-      >
-        {valor}
-      </div>
-    </div>
-  );
-}
+const DADOS_INICIAIS: Lancamento[] = [
+  {
+    id: "1",
+    titulo: "Mensalidade institucional",
+    tipo: "entrada",
+    valor: 210,
+    categoria: "Mensalidade",
+    conta: "Caixa Institucional",
+    centroCusto: "Administrativo",
+    competencia: "2026-04",
+    status: "pago",
+    descricao: "Base inicial de leitura institucional.",
+  },
+];
 
-function CardModulo({
-  titulo,
-  descricao,
-  href,
-  badge,
-}: {
-  titulo: string;
-  descricao: string;
-  href: string;
-  badge?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: "none",
-        display: "block",
-        background: "#ffffff",
-        borderRadius: 24,
-        border: "1px solid #dbe4ea",
-        padding: 22,
-        boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
-        transition: "transform 0.15s ease",
-      }}
-    >
-      {badge ? (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            borderRadius: 999,
-            padding: "7px 12px",
-            background: "#ecfeff",
-            border: "1px solid #a5f3fc",
-            color: "#0f766e",
-            fontSize: 12,
-            fontWeight: 800,
-            marginBottom: 14,
-          }}
-        >
-          {badge}
-        </div>
-      ) : null}
-
-      <h2
-        style={{
-          margin: 0,
-          color: "#0f172a",
-          fontSize: 22,
-          lineHeight: 1.15,
-        }}
-      >
-        {titulo}
-      </h2>
-
-      <p
-        style={{
-          marginTop: 12,
-          marginBottom: 0,
-          color: "#475569",
-          lineHeight: 1.75,
-          fontSize: 15,
-        }}
-      >
-        {descricao}
-      </p>
-    </Link>
-  );
+function moeda(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(valor);
 }
 
 export default function FinanceiroPage() {
+  const [lancamentos] = useState<Lancamento[]>(DADOS_INICIAIS);
+
+  useEffect(() => {
+    protegerPagina();
+  }, []);
+
+  const entradas = useMemo(
+    () =>
+      lancamentos
+        .filter((item) => item.tipo === "entrada" && item.status !== "cancelado")
+        .reduce((acc, item) => acc + item.valor, 0),
+    [lancamentos],
+  );
+
+  const saidas = useMemo(
+    () =>
+      lancamentos
+        .filter((item) => item.tipo === "saida" && item.status !== "cancelado")
+        .reduce((acc, item) => acc + item.valor, 0),
+    [lancamentos],
+  );
+
+  const saldo = entradas - saidas;
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f8fbfd 0%, #edf6f9 45%, #f8fbfd 100%)",
-        padding: "24px 16px 56px",
-        fontFamily: "Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: 1240, margin: "0 auto" }}>
-        <section
-          style={{
-            borderRadius: 30,
-            padding: 28,
-            background:
-              "linear-gradient(135deg, #052e2b 0%, #065f46 55%, #059669 100%)",
-            color: "#ffffff",
-            boxShadow: "0 30px 80px rgba(5, 46, 43, 0.25)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-            }}
-          >
-            <div style={{ maxWidth: 840 }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  borderRadius: 999,
-                  padding: "8px 14px",
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.14)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  marginBottom: 16,
-                }}
-              >
-                Financeiro institucional protegido
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.10),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#ffffff,_#f0fdf4)] text-slate-900">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[2rem] border border-emerald-100/80 bg-white shadow-[0_24px_70px_-34px_rgba(22,163,74,0.22)]">
+          <div className="border-b border-emerald-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 px-6 py-7 text-white">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-4xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
+                  Aurora Loja Maçônica
+                </p>
+                <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Financeiro institucional
+                </h1>
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 sm:text-base">
+                  Área financeira protegida para controle institucional,
+                  lançamentos, leitura de saldo e organização administrativa com
+                  padrão verde premium.
+                </p>
               </div>
 
-              <h1 style={{ margin: 0, fontSize: 34, lineHeight: 1.1 }}>
-                Financeiro • Aurora Loja Maçônica
-              </h1>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/irmaos"
+                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  Voltar à área interna
+                </Link>
+                <Link
+                  href="/relatorios"
+                  className="rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-center text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/25"
+                >
+                  Relatórios
+                </Link>
+              </div>
+            </div>
+          </div>
 
-              <p
-                style={{
-                  marginTop: 14,
-                  marginBottom: 0,
-                  maxWidth: 760,
-                  color: "rgba(255,255,255,0.92)",
-                  lineHeight: 1.75,
-                  fontSize: 15,
-                }}
-              >
-                Controle financeiro institucional com blindagem administrativa,
-                estrutura preparada para lançamentos, relatórios, histórico,
-                competências, Tronco de Solidariedade e evolução segura por
-                cargo. Sistema em constante atualização e podem ocorrer
-                instabilidades momentâneas durante melhorias.
+          <div className="grid gap-4 bg-gradient-to-b from-white to-slate-50/70 px-6 py-6 lg:grid-cols-3">
+            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                Entradas
+              </p>
+              <h2 className="mt-3 text-lg font-bold text-slate-900">
+                {moeda(entradas)}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Soma das entradas válidas da base financeira.
               </p>
             </div>
 
-            <Link
-              href="/"
-              style={{
-                textDecoration: "none",
-                background: "#ffffff",
-                color: "#065f46",
-                padding: "12px 18px",
-                borderRadius: 16,
-                fontWeight: 800,
-                border: "1px solid rgba(255,255,255,0.18)",
-                boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
-              }}
-            >
-              Voltar ao painel
-            </Link>
-          </div>
-        </section>
-
-        <section
-          style={{
-            marginTop: 22,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <CardResumo titulo="Status da rota" valor="Restaurada" destaque />
-          <CardResumo titulo="Blindagem" valor="Ativa" />
-          <CardResumo titulo="Próximo foco" valor="RBAC por cargo" />
-          <CardResumo titulo="Módulos ligados" valor="Financeiro base" />
-        </section>
-
-        <section
-          style={{
-            marginTop: 24,
-            background: "#ffffff",
-            borderRadius: 24,
-            border: "1px solid #dbe4ea",
-            padding: 24,
-            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#0f766e",
-              marginBottom: 12,
-            }}
-          >
-            Observação institucional
-          </div>
-
-          <h2
-            style={{
-              marginTop: 0,
-              marginBottom: 12,
-              color: "#0f172a",
-              fontSize: 26,
-            }}
-          >
-            Tronco de Solidariedade e Doações
-          </h2>
-
-          <div style={{ display: "grid", gap: 12 }}>
-            <div
-              style={{
-                borderRadius: 18,
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                padding: 16,
-                color: "#334155",
-                lineHeight: 1.7,
-                fontSize: 15,
-              }}
-            >
-              <strong>Tronco de Solidariedade</strong> deve entrar como{" "}
-              <strong>entrada</strong> no caixa da loja.
+            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                Saídas
+              </p>
+              <h2 className="mt-3 text-lg font-bold text-slate-900">
+                {moeda(saidas)}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Soma das saídas válidas da base financeira.
+              </p>
             </div>
 
-            <div
-              style={{
-                borderRadius: 18,
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                padding: 16,
-                color: "#334155",
-                lineHeight: 1.7,
-                fontSize: 15,
-              }}
-            >
-              <strong>Doações</strong> devem permanecer como{" "}
-              <strong>saída</strong> quando houver destinação do recurso.
+            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                Saldo
+              </p>
+              <h2 className="mt-3 text-lg font-bold text-slate-900">
+                {moeda(saldo)}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Leitura consolidada da situação institucional atual.
+              </p>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section
-          style={{
-            marginTop: 24,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 18,
-          }}
-        >
-          <CardModulo
-            titulo="Cargos e páginas exclusivas"
-            descricao="Estrutura de páginas por cargo, com função, missão, rotina, limites de acesso e área própria de cada irmão conforme o papel institucional."
-            href="/"
-            badge="Próxima etapa"
-          />
-
-          <CardModulo
-            titulo="Ex-Veneráveis"
-            descricao="Página própria com data de fundação da loja, relação histórica dos ex-veneráveis, período de venerância, data de início e término, preparada para mandatos de 2 em 2 anos."
-            href="/"
-            badge="Página separada"
-          />
-
-          <CardModulo
-            titulo="Irmãos Remidos"
-            descricao="Página institucional reservada para a relação de irmãos remidos, com organização própria e visual adequado ao histórico e à memória da loja."
-            href="/"
-            badge="Página separada"
-          />
-        </section>
-
-        <section
-          style={{
-            marginTop: 24,
-            background: "#ffffff",
-            borderRadius: 24,
-            border: "1px solid #dbe4ea",
-            padding: 24,
-            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#0f766e",
-              marginBottom: 12,
-            }}
-          >
-            Ordem segura de construção
+        <div className="rounded-[1.75rem] border border-emerald-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                Base financeira protegida
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-slate-900">
+                Lançamentos institucionais
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Esta área permanece protegida e preparada para crescer sem
+                quebrar o padrão institucional já publicado.
+              </p>
+            </div>
           </div>
 
-          <ol
-            style={{
-              margin: 0,
-              paddingLeft: 22,
-              color: "#334155",
-              lineHeight: 1.9,
-              fontSize: 15,
-            }}
-          >
-            <li>Blindar e estabilizar a rota atual do financeiro.</li>
-            <li>Concluir a base institucional dos cargos e permissões.</li>
-            <li>Criar a página dinâmica de cada cargo.</li>
-            <li>
-              Criar a página de <strong>Ex-Veneráveis</strong> com fundação e
-              períodos.
-            </li>
-            <li>
-              Criar a página de <strong>Irmãos Remidos</strong>.
-            </li>
-            <li>
-              Depois voltar para os ajustes finos do financeiro e integração com
-              RBAC.
-            </li>
-          </ol>
-        </section>
-      </div>
+          <div className="mt-6 grid gap-4">
+            {lancamentos.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-base font-bold text-slate-900">
+                      {item.titulo}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {item.categoria} • {item.conta} • {item.centroCusto}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Competência: {item.competencia} • Status: {item.status}
+                    </p>
+                    {item.descricao ? (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {item.descricao}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900">
+                    {moeda(item.valor)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <footer className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
+          Sistema em constante atualização. O financeiro institucional permanece
+          protegido e pode evoluir depois sem comprometer a base existente.
+        </footer>
+      </section>
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protegerPagina } from "@/lib/auth-guard";
 
 type LojaPayload = {
   id: string;
@@ -172,6 +173,10 @@ export default function IrmaosHomePage() {
     lojaSlug: null,
     lojaNome: null,
   });
+
+  useEffect(() => {
+    protegerPagina();
+  }, []);
 
   useEffect(() => {
     let ativo = true;

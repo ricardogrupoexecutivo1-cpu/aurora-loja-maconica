@@ -1,28 +1,8 @@
-export function verificarSessaoLoja() {
-  if (typeof window === "undefined") return false;
+import type { SessaoLoja } from "./authGuard";
+import { protegerRota } from "./authGuard";
 
-  try {
-    const raw = window.localStorage.getItem("aurora-loja-maconica-auth");
-    if (!raw) return false;
+export type { SessaoLoja };
 
-    const sessao = JSON.parse(raw);
-
-    return Boolean(
-      sessao &&
-        sessao.autenticado === true &&
-        sessao.acessoLiberado === true,
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function protegerPagina() {
-  if (typeof window === "undefined") return;
-
-  const acessoOk = verificarSessaoLoja();
-
-  if (!acessoOk) {
-    window.location.href = "/login";
-  }
+export function protegerPagina(): SessaoLoja | null {
+  return protegerRota();
 }

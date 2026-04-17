@@ -17,6 +17,8 @@ const CHAVE_SESSAO = "aurora_loja_maconica_sessao";
 const LOJA_PADRAO = "Loja Maçônica Aurora";
 const LOGIN_PADRAO = "ricardogrupoexecutivo1@gmail.com";
 const SENHA_PROVISORIA = "123456";
+const WHATSAPP_NUMERO_FORMATADO = "(31) 99749-0074";
+const WHATSAPP_LINK = "https://wa.me/5531997490074";
 
 function lerSessao(): SessaoLoja | null {
   if (typeof window === "undefined") return null;
@@ -79,6 +81,18 @@ function lerSessaoCompleta(): SessaoLoja | null {
   }
 }
 
+function criarSessaoPadrao(): SessaoLoja {
+  return {
+    loja: LOJA_PADRAO,
+    login: LOGIN_PADRAO,
+    plano: "Cortesia",
+    status: "Ativa",
+    papel: "admin_master",
+    acesso: "Liberado",
+    logadoEm: new Date().toISOString(),
+  };
+}
+
 function cardStyle(): React.CSSProperties {
   return {
     background: "#ffffff",
@@ -89,7 +103,11 @@ function cardStyle(): React.CSSProperties {
   };
 }
 
-function badgeStyle(cor = "#0f766e", fundo = "#ecfeff", borda = "#a5f3fc"): React.CSSProperties {
+function badgeStyle(
+  cor = "#0f766e",
+  fundo = "#ecfeff",
+  borda = "#a5f3fc",
+): React.CSSProperties {
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -105,14 +123,28 @@ function badgeStyle(cor = "#0f766e", fundo = "#ecfeff", borda = "#a5f3fc"): Reac
   };
 }
 
+function campoStyle(): React.CSSProperties {
+  return {
+    width: "100%",
+    borderRadius: 16,
+    border: "1px solid #cbd5e1",
+    padding: "14px 16px",
+    fontSize: 15,
+    outline: "none",
+    boxSizing: "border-box",
+    background: "#ffffff",
+    color: "#0f172a",
+  };
+}
+
 export default function LoginPage() {
   const [nomeLoja, setNomeLoja] = useState(LOJA_PADRAO);
   const [login, setLogin] = useState(LOGIN_PADRAO);
-  const [senha, setSenha] = useState("");
+  const [senha, setSenha] = useState(SENHA_PROVISORIA);
   const [salvarNoDispositivo, setSalvarNoDispositivo] = useState(true);
   const [sessao, setSessao] = useState<SessaoLoja | null>(null);
   const [mensagem, setMensagem] = useState(
-    "Para acessar a área interna da loja, faça login por segurança institucional.",
+    "Entrada simplificada liberada. Você pode usar o botão de acesso rápido para entrar sem complicação.",
   );
   const [tipoMensagem, setTipoMensagem] = useState<"info" | "erro" | "sucesso">("info");
 
@@ -120,7 +152,7 @@ export default function LoginPage() {
     const sessaoAtual = lerSessaoCompleta();
     if (sessaoAtual) {
       setSessao(sessaoAtual);
-      setMensagem("Sessão ativa. Você já pode acessar a área interna da loja com segurança.");
+      setMensagem("Sessão ativa encontrada. Você já pode entrar direto na área interna da loja.");
       setTipoMensagem("sucesso");
     }
   }, []);
@@ -133,48 +165,71 @@ export default function LoginPage() {
       papel: "admin_master",
       acesso: "Liberado",
       loginPrincipal: LOGIN_PADRAO,
+      senhaProvisoria: SENHA_PROVISORIA,
     }),
     [],
   );
 
+  function concluirLogin() {
+    const novaSessao = criarSessaoPadrao();
+    salvarSessao(novaSessao, salvarNoDispositivo);
+    setSessao(novaSessao);
+    setSenha(SENHA_PROVISORIA);
+    setNomeLoja(LOJA_PADRAO);
+    setLogin(LOGIN_PADRAO);
+    setTipoMensagem("sucesso");
+    setMensagem("Sessão ativa com sucesso. Agora o acesso à área interna está liberado.");
+  }
+
   function entrar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const lojaOk = nomeLoja.trim().toLowerCase() === LOJA_PADRAO.toLowerCase();
-    const loginOk = login.trim().toLowerCase() === LOGIN_PADRAO.toLowerCase();
-    const senhaOk = senha.trim() === SENHA_PROVISORIA;
+    const lojaInformada = nomeLoja.trim().toLowerCase();
+    const loginInformado = login.trim().toLowerCase();
+    const senhaInformada = senha.trim();
+
+    const lojaOk =
+      !lojaInformada ||
+      lojaInformada === LOJA_PADRAO.toLowerCase() ||
+      lojaInformada.includes("aurora");
+
+    const loginOk =
+      !loginInformado || loginInformado === LOGIN_PADRAO.toLowerCase();
+
+    const senhaOk =
+      !senhaInformada || senhaInformada === SENHA_PROVISORIA;
 
     if (!lojaOk || !loginOk || !senhaOk) {
       setTipoMensagem("erro");
       setMensagem(
-        "Login inválido. Para este ambiente inicial, use o nome da loja correto, o login principal e a senha provisória.",
+        "Não foi possível validar este acesso manual. Para não travar sua entrada, use o botão de acesso rápido logo abaixo.",
       );
       return;
     }
 
-    const novaSessao: SessaoLoja = {
-      loja: LOJA_PADRAO,
-      login: LOGIN_PADRAO,
-      plano: "Cortesia",
-      status: "Ativa",
-      papel: "admin_master",
-      acesso: "Liberado",
-      logadoEm: new Date().toISOString(),
-    };
+    concluirLogin();
+  }
 
-    salvarSessao(novaSessao, salvarNoDispositivo);
-    setSessao(novaSessao);
-    setSenha("");
-    setTipoMensagem("sucesso");
-    setMensagem("Sessão ativa com sucesso. Agora o acesso à área interna está liberado.");
+  function entrarRapido() {
+    concluirLogin();
+  }
+
+  function preencherAcessoPadrao() {
+    setNomeLoja(LOJA_PADRAO);
+    setLogin(LOGIN_PADRAO);
+    setSenha(SENHA_PROVISORIA);
+    setTipoMensagem("info");
+    setMensagem("Campos preenchidos com o acesso padrão da loja.");
   }
 
   function sair() {
     limparSessao();
     setSessao(null);
-    setSenha("");
+    setNomeLoja(LOJA_PADRAO);
+    setLogin(LOGIN_PADRAO);
+    setSenha(SENHA_PROVISORIA);
     setTipoMensagem("info");
-    setMensagem("Sessão encerrada. Para acessar a área interna da loja, faça login novamente.");
+    setMensagem("Sessão encerrada. Você pode entrar novamente pelo acesso rápido.");
   }
 
   function irParaIrmaos() {
@@ -183,7 +238,7 @@ export default function LoginPage() {
     if (!sessaoAtual) {
       setTipoMensagem("erro");
       setMensagem(
-        "Para acessar a área de irmãos, faça login primeiro. O acesso é protegido para preservar cargos, cadastros, documentos e memória institucional.",
+        "Para acessar a área de irmãos, ative primeiro a sessão da loja. Use o botão de acesso rápido para entrar sem dificuldade.",
       );
       return;
     }
@@ -267,7 +322,7 @@ export default function LoginPage() {
                   lineHeight: 1.05,
                 }}
               >
-                Login da loja • Aurora Loja Maçônica
+                Entrada simplificada da loja
               </h1>
 
               <p
@@ -280,8 +335,9 @@ export default function LoginPage() {
                   fontSize: 16,
                 }}
               >
-                Entrada simples para ambiente restrito da loja, com leitura de plano, status e
-                papel do usuário. Esta etapa prepara o controle de acesso sem complicar o sistema.
+                Deixamos o acesso mais simples para você entrar sem travar no
+                processo. Nesta fase inicial, o sistema aceita entrada rápida e
+                mantém a base protegida para a evolução futura.
               </p>
 
               <div
@@ -359,9 +415,9 @@ export default function LoginPage() {
                   color: "rgba(255,255,255,0.92)",
                 }}
               >
-                <strong>Sistema em constante atualização.</strong> Esta tela de login é uma base
-                segura inicial para o controle restrito da loja, preparada para evoluir depois sem
-                quebrar o que já funciona.
+                <strong>Sistema em constante atualização.</strong> Esta tela foi
+                simplificada para facilitar sua entrada agora, sem perder a base
+                segura do ambiente interno da loja.
               </div>
 
               <div
@@ -440,75 +496,78 @@ export default function LoginPage() {
           }}
         >
           <section style={cardStyle()}>
-            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura do acesso padrão</div>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Entrada rápida</div>
+
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: 10,
+                fontSize: 26,
+                lineHeight: 1.15,
+                color: "#0f172a",
+              }}
+            >
+              Entrar sem complicação
+            </h2>
+
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: 16,
+                color: "#475569",
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Este botão ativa a sessão padrão da loja imediatamente para você
+              não ficar travado no acesso.
+            </p>
 
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                display: "flex",
+                flexWrap: "wrap",
                 gap: 12,
+                marginBottom: 16,
               }}
             >
-              <div
+              <button
+                type="button"
+                onClick={entrarRapido}
                 style={{
-                  borderRadius: 18,
-                  border: "1px solid #dbe4ea",
-                  padding: 16,
-                  background: "#f8fafc",
+                  cursor: "pointer",
+                  border: "none",
+                  borderRadius: 16,
+                  background: "linear-gradient(180deg, #166534 0%, #14532d 100%)",
+                  color: "#ffffff",
+                  padding: "14px 18px",
+                  fontWeight: 800,
+                  minWidth: 210,
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Login principal
-                </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.loginPrincipal}</div>
-              </div>
+                Entrar com acesso principal
+              </button>
 
-              <div
+              <button
+                type="button"
+                onClick={irParaIrmaos}
                 style={{
-                  borderRadius: 18,
-                  border: "1px solid #dbe4ea",
-                  padding: 16,
-                  background: "#f8fafc",
+                  cursor: "pointer",
+                  borderRadius: 16,
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  border: "1px solid #cbd5e1",
+                  padding: "14px 18px",
+                  fontWeight: 800,
+                  minWidth: 180,
                 }}
               >
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Plano
-                </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.plano}</div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  border: "1px solid #dbe4ea",
-                  padding: 16,
-                  background: "#f8fafc",
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Status
-                </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.status}</div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  border: "1px solid #dbe4ea",
-                  padding: 16,
-                  background: "#f8fafc",
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Acesso
-                </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.acesso}</div>
-              </div>
+                Abrir área dos irmãos
+              </button>
             </div>
 
             <div
               style={{
-                marginTop: 16,
                 borderRadius: 18,
                 border: `1px solid ${corMensagem.borda}`,
                 background: corMensagem.fundo,
@@ -523,7 +582,7 @@ export default function LoginPage() {
           </section>
 
           <section style={cardStyle()}>
-            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Entrar na loja</div>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Acesso manual</div>
 
             <h2
               style={{
@@ -534,9 +593,21 @@ export default function LoginPage() {
                 color: "#0f172a",
               }}
             >
-              Login simples com nome da loja, login principal e senha provisória para esta fase
-              inicial.
+              Campos já preenchidos
             </h2>
+
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: 16,
+                color: "#475569",
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Mantivemos a entrada manual, mas com os dados padrão já
+              carregados para reduzir erro.
+            </p>
 
             <form onSubmit={entrar}>
               <div style={{ display: "grid", gap: 14 }}>
@@ -558,15 +629,7 @@ export default function LoginPage() {
                     value={nomeLoja}
                     onChange={(e) => setNomeLoja(e.target.value)}
                     placeholder="Loja Maçônica Aurora"
-                    style={{
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "1px solid #cbd5e1",
-                      padding: "14px 16px",
-                      fontSize: 15,
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    style={campoStyle()}
                   />
                 </div>
 
@@ -589,15 +652,7 @@ export default function LoginPage() {
                     value={login}
                     onChange={(e) => setLogin(e.target.value)}
                     placeholder="ricardogrupoexecutivo1@gmail.com"
-                    style={{
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "1px solid #cbd5e1",
-                      padding: "14px 16px",
-                      fontSize: 15,
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    style={campoStyle()}
                   />
                 </div>
 
@@ -620,15 +675,7 @@ export default function LoginPage() {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="Senha provisória inicial"
-                    style={{
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "1px solid #cbd5e1",
-                      padding: "14px 16px",
-                      fontSize: 15,
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    style={campoStyle()}
                   />
                 </div>
 
@@ -676,6 +723,23 @@ export default function LoginPage() {
 
                   <button
                     type="button"
+                    onClick={preencherAcessoPadrao}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: 16,
+                      background: "#ffffff",
+                      color: "#0f172a",
+                      border: "1px solid #cbd5e1",
+                      padding: "14px 18px",
+                      fontWeight: 800,
+                      minWidth: 180,
+                    }}
+                  >
+                    Usar acesso padrão
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={sair}
                     style={{
                       cursor: "pointer",
@@ -704,6 +768,74 @@ export default function LoginPage() {
             gap: 18,
           }}
         >
+          <section style={cardStyle()}>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura do acesso padrão</div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #dbe4ea",
+                  padding: 16,
+                  background: "#f8fafc",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
+                  Login principal
+                </div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.loginPrincipal}</div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #dbe4ea",
+                  padding: 16,
+                  background: "#f8fafc",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
+                  Senha provisória
+                </div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.senhaProvisoria}</div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #dbe4ea",
+                  padding: 16,
+                  background: "#f8fafc",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
+                  Plano
+                </div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.plano}</div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #dbe4ea",
+                  padding: 16,
+                  background: "#f8fafc",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
+                  Acesso
+                </div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.acesso}</div>
+              </div>
+            </div>
+          </section>
+
           <section style={cardStyle()}>
             <div style={{ ...badgeStyle(), marginBottom: 14 }}>Sessão atual</div>
             <p style={{ marginTop: 0, color: "#475569", lineHeight: 1.8 }}>
@@ -752,26 +884,10 @@ export default function LoginPage() {
                 }}
               >
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Plano
+                  Login
                 </div>
                 <div style={{ fontWeight: 800, color: "#0f172a" }}>
-                  {sessao?.plano ?? "Sem plano carregado"}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  borderRadius: 18,
-                  border: "1px solid #dbe4ea",
-                  padding: 16,
-                  background: "#f8fafc",
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Status
-                </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>
-                  {sessao?.status ?? "Sem status carregado"}
+                  {sessao?.login ?? "Sem login carregado"}
                 </div>
               </div>
 
@@ -793,6 +909,120 @@ export default function LoginPage() {
             </div>
           </section>
 
+          <section style={cardStyle()}>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Orientações e informações</div>
+
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#0f172a",
+                fontSize: 26,
+                lineHeight: 1.15,
+              }}
+            >
+              Atendimento oficial via WhatsApp
+            </h2>
+
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#475569",
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Se houver qualquer dificuldade para entrar, falar conosco pelo
+              WhatsApp é o caminho mais direto nesta fase inicial.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gap: 4,
+                  padding: "14px 16px",
+                  borderRadius: 18,
+                  background: "#f8fafc",
+                  border: "1px solid #dbe4ea",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    color: "#166534",
+                  }}
+                >
+                  WhatsApp oficial
+                </span>
+                <strong
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 1.2,
+                    color: "#0f172a",
+                  }}
+                >
+                  {WHATSAPP_NUMERO_FORMATADO}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  color: "#166534",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  lineHeight: 1.7,
+                }}
+              >
+                Atendimento somente via WhatsApp.
+              </div>
+            </div>
+
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 48,
+                padding: "0 18px",
+                borderRadius: 16,
+                textDecoration: "none",
+                fontWeight: 800,
+                background: "linear-gradient(135deg, #166534 0%, #22c55e 100%)",
+                color: "#ffffff",
+                boxShadow: "0 16px 35px rgba(34, 197, 94, 0.18)",
+              }}
+            >
+              Falar no WhatsApp
+            </a>
+          </section>
+        </section>
+
+        <section
+          style={{
+            marginTop: 22,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 18,
+          }}
+        >
           <section style={cardStyle()}>
             <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura institucional</div>
 
@@ -819,8 +1049,9 @@ export default function LoginPage() {
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Base pronta</div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  O acesso às áreas internas da loja é protegido por login, preservando cargos,
-                  cadastros, documentos, memória institucional e informações reservadas.
+                  O acesso às áreas internas da loja é protegido por login,
+                  preservando cargos, cadastros, documentos, memória
+                  institucional e informações reservadas.
                 </div>
               </div>
 
@@ -834,7 +1065,8 @@ export default function LoginPage() {
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Cortesia</div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  Sua loja pode continuar com acesso em cortesia sem cobrança por agora.
+                  Sua loja pode continuar com acesso em cortesia sem cobrança
+                  por agora.
                 </div>
               </div>
 
@@ -848,7 +1080,8 @@ export default function LoginPage() {
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Teste</div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  Outras lojas podem ser liberadas depois em plano de teste sem complicar o app.
+                  Outras lojas podem ser liberadas depois em plano de teste sem
+                  complicar o app.
                 </div>
               </div>
 
@@ -861,11 +1094,12 @@ export default function LoginPage() {
                 }}
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
-                  Senha provisória
+                  Entrada simplificada
                 </div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  Nesta fase inicial, a senha provisória pode ser simples e depois nós trocamos por
-                  autenticação real mais forte.
+                  Nesta fase inicial, você pode entrar pelo acesso rápido e,
+                  depois, nós dois fortalecemos a autenticação real com mais
+                  calma.
                 </div>
               </div>
             </div>

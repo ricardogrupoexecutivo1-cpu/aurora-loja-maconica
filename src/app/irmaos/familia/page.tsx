@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protegerRota } from "@/lib/authGuard";
 
 type CategoriaFamiliar =
   | "Cunhada"
@@ -98,6 +99,9 @@ function baixarJson(nomeArquivo: string, conteudo: unknown) {
 }
 
 export default function FamiliaPage() {
+  const sessao = protegerRota();
+  if (!sessao) return null;
+
   const [familiares, setFamiliares] = useState<Familiar[]>([]);
   const [form, setForm] = useState(FORM_INICIAL);
   const [carregando, setCarregando] = useState(true);
@@ -147,19 +151,19 @@ export default function FamiliaPage() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(termo)
+        .includes(termo),
     );
   }, [familiares, busca]);
 
   const totalFamilia = familiares.length;
   const totalCunhadas = familiares.filter((item) => item.categoria === "Cunhada").length;
   const totalDescendencia = familiares.filter((item) =>
-    ["Filho", "Filha", "Sobrinho", "Sobrinha", "Neto", "Neta"].includes(item.categoria)
+    ["Filho", "Filha", "Sobrinho", "Sobrinha", "Neto", "Neta"].includes(item.categoria),
   ).length;
 
   const ultimoRegistro = familiares.length
     ? [...familiares].sort(
-        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime(),
       )[0]
     : null;
 
@@ -207,7 +211,7 @@ export default function FamiliaPage() {
         irmaoVinculado: IRMAO_FIXO,
         totalRegistros: familiares.length,
         registros: familiares,
-      }
+      },
     );
 
     setMensagem("Download da base local gerado com sucesso.");
@@ -401,7 +405,9 @@ export default function FamiliaPage() {
                   <span style={styles.label}>Categoria</span>
                   <select
                     value={form.categoria}
-                    onChange={(e) => atualizarCampo("categoria", e.target.value)}
+                    onChange={(e) =>
+                      atualizarCampo("categoria", e.target.value as CategoriaFamiliar)
+                    }
                     style={styles.select}
                   >
                     <option value="Cunhada">Cunhada</option>

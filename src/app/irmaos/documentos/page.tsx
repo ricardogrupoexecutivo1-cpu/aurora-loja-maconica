@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protegerRota } from "@/lib/authGuard";
 
 type TipoDocumento =
   | "Ficha"
@@ -85,6 +86,9 @@ function baixarJson(nomeArquivo: string, conteudo: unknown) {
 }
 
 export default function DocumentosPage() {
+  const [liberado, setLiberado] = useState(false);
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+
   const [documentos, setDocumentos] = useState<DocumentoRegistro[]>([]);
   const [form, setForm] = useState(FORM_INICIAL);
   const [carregando, setCarregando] = useState(true);
@@ -94,6 +98,18 @@ export default function DocumentosPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
+    const sessao = protegerRota();
+
+    if (sessao) {
+      setLiberado(true);
+    }
+
+    setVerificandoAcesso(false);
+  }, []);
+
+  useEffect(() => {
+    if (!liberado) return;
+
     try {
       const salvo = localStorage.getItem(STORAGE_KEY);
       if (salvo) {
@@ -107,17 +123,17 @@ export default function DocumentosPage() {
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [liberado]);
 
   useEffect(() => {
-    if (carregando) return;
+    if (!liberado || carregando) return;
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(documentos));
     } catch {
       setErro("Não foi possível atualizar a base local automaticamente.");
     }
-  }, [documentos, carregando]);
+  }, [documentos, carregando, liberado]);
 
   const documentosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -125,7 +141,7 @@ export default function DocumentosPage() {
     const baseOrdenada = [...documentos].sort(
       (a, b) =>
         new Date(b.dataDocumento || b.criadoEm).getTime() -
-        new Date(a.dataDocumento || a.criadoEm).getTime()
+        new Date(a.dataDocumento || a.criadoEm).getTime(),
     );
 
     if (!termo) return baseOrdenada;
@@ -143,18 +159,18 @@ export default function DocumentosPage() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(termo)
+        .includes(termo),
     );
   }, [documentos, busca]);
 
   const totalDocumentos = documentos.length;
   const totalAtivos = documentos.filter((item) => item.status === "Ativo").length;
   const totalComprovantes = documentos.filter(
-    (item) => item.tipo === "Comprovante" || item.tipo === "Declaração"
+    (item) => item.tipo === "Comprovante" || item.tipo === "Declaração",
   ).length;
   const ultimoRegistro = documentos.length
     ? [...documentos].sort(
-        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime(),
       )[0]
     : null;
 
@@ -193,17 +209,14 @@ export default function DocumentosPage() {
   }
 
   function baixarBase() {
-    baixarJson(
-      `documentos-irmao-${new Date().toISOString().slice(0, 10)}.json`,
-      {
-        sistema: "Aurora Loja Maçônica",
-        modulo: "Documentos e downloads",
-        exportadoEm: new Date().toISOString(),
-        irmaoVinculado: IRMAO_FIXO,
-        totalRegistros: documentos.length,
-        registros: documentos,
-      }
-    );
+    baixarJson(`documentos-irmao-${new Date().toISOString().slice(0, 10)}.json`, {
+      sistema: "Aurora Loja Maçônica",
+      modulo: "Documentos e downloads",
+      exportadoEm: new Date().toISOString(),
+      irmaoVinculado: IRMAO_FIXO,
+      totalRegistros: documentos.length,
+      registros: documentos,
+    });
 
     setMensagem("Download da base local gerado com sucesso.");
     setErro("");
@@ -255,6 +268,29 @@ export default function DocumentosPage() {
     }
   }
 
+  if (verificandoAcesso) {
+    return (
+      <main style={styles.page}>
+        <div style={styles.pageGlowOne} />
+        <div style={styles.pageGlowTwo} />
+
+        <section style={styles.guardWrap}>
+          <div style={styles.guardCard}>
+            <div style={styles.guardBadge}>Aurora Loja Maçônica</div>
+            <h1 style={styles.guardTitle}>Verificando acesso institucional</h1>
+            <p style={styles.guardText}>
+              Aguarde um instante enquanto validamos o ambiente protegido da loja.
+            </p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!liberado) {
+    return null;
+  }
+
   return (
     <main style={styles.page}>
       <div style={styles.pageGlowOne} />
@@ -288,8 +324,9 @@ export default function DocumentosPage() {
               </div>
 
               <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta área pode passar por melhorias
-                visuais, operacionais e de organização documental durante a evolução da plataforma.
+                <strong>Sistema em constante atualização.</strong> Esta área pode passar por
+                melhorias visuais, operacionais e de organização documental durante a evolução da
+                plataforma.
               </div>
             </div>
 
@@ -323,7 +360,9 @@ export default function DocumentosPage() {
 
                   <div style={styles.profileInfoItem}>
                     <span style={styles.profileLabel}>Base</span>
-                    <strong style={styles.profileValue}>Documentação institucional do irmão</strong>
+                    <strong style={styles.profileValue}>
+                      Documentação institucional do irmão
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -396,7 +435,7 @@ export default function DocumentosPage() {
                   <span style={styles.label}>Tipo de documento</span>
                   <select
                     value={form.tipo}
-                    onChange={(e) => atualizarCampo("tipo", e.target.value)}
+                    onChange={(e) => atualizarCampo("tipo", e.target.value as TipoDocumento)}
                     style={styles.select}
                   >
                     <option value="Ficha">Ficha</option>
@@ -521,9 +560,7 @@ export default function DocumentosPage() {
                 {carregando ? (
                   <div style={styles.emptyState}>Carregando documentos...</div>
                 ) : documentosFiltrados.length === 0 ? (
-                  <div style={styles.emptyState}>
-                    Nenhum documento encontrado na base protegida.
-                  </div>
+                  <div style={styles.emptyState}>Nenhum documento encontrado na base protegida.</div>
                 ) : (
                   documentosFiltrados.map((item) => (
                     <div key={item.id} style={styles.docCard}>
@@ -549,7 +586,9 @@ export default function DocumentosPage() {
                         <div style={styles.docInfoBox}>
                           <span style={styles.smallLabel}>Data</span>
                           <strong style={styles.smallValue}>
-                            {item.dataDocumento ? formatarDataBR(item.dataDocumento) : "Não informada"}
+                            {item.dataDocumento
+                              ? formatarDataBR(item.dataDocumento)
+                              : "Não informada"}
                           </strong>
                         </div>
 
@@ -619,8 +658,8 @@ export default function DocumentosPage() {
                 <div style={styles.readingItem}>
                   <strong style={styles.readingTitle}>Visual verde premium</strong>
                   <p style={styles.readingText}>
-                    Mantivemos o mesmo padrão verde premium aprovado nas áreas dos irmãos, família
-                    e histórico maçônico.
+                    Mantivemos o mesmo padrão verde premium aprovado nas áreas dos irmãos, família e
+                    histórico maçônico.
                   </p>
                 </div>
               </div>
@@ -671,6 +710,57 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     position: "relative",
     zIndex: 1,
+  },
+  guardWrap: {
+    maxWidth: 920,
+    margin: "0 auto",
+    minHeight: "calc(100vh - 84px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  guardCard: {
+    width: "100%",
+    maxWidth: 560,
+    background: "rgba(255,255,255,0.88)",
+    backdropFilter: "blur(14px)",
+    border: "1px solid rgba(134,239,172,0.26)",
+    borderRadius: 32,
+    padding: 28,
+    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
+    display: "grid",
+    gap: 14,
+    textAlign: "center",
+  },
+  guardBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    justifySelf: "center",
+    padding: "9px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    background: "rgba(34,197,94,0.12)",
+    color: "#166534",
+    border: "1px solid rgba(34,197,94,0.18)",
+  },
+  guardTitle: {
+    margin: 0,
+    fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+    lineHeight: 1.08,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  guardText: {
+    margin: 0,
+    fontSize: 15,
+    lineHeight: 1.7,
+    color: "#355244",
   },
   hero: {
     background: "rgba(255,255,255,0.84)",

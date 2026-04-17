@@ -2,537 +2,791 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { protegerPagina } from "@/lib/auth-guard";
 
-type LojaPayload = {
-  id: string;
-  slug: string | null;
-  nome_loja: string | null;
-  responsavel_nome: string | null;
-  responsavel_email: string | null;
-  responsavel_whatsapp: string | null;
-  cidade: string | null;
-  estado: string | null;
-  mensagem_institucional: string | null;
-  configuracao_concluida: boolean;
-  status: string | null;
-  plano: string | null;
-  courtesy_expires_at: string | null;
+type SessaoLoja = {
+  loja: string;
+  login: string;
+  plano: string;
+  status: string;
+  papel: string;
+  acesso: string;
+  logadoEm: string;
 };
 
-type ApiResponse = {
-  success: boolean;
-  message?: string;
-  loja?: LojaPayload | null;
-};
+const CHAVE_SESSAO = "aurora_loja_maconica_sessao";
+const WHATSAPP_NUMERO_FORMATADO = "(31) 99749-0074";
+const WHATSAPP_LINK = "https://wa.me/5531997490074";
 
-type ReferenciaLocal = {
-  lojaId: string | null;
-  lojaSlug: string | null;
-  lojaNome: string | null;
-};
+function lerSessaoCompleta(): SessaoLoja | null {
+  if (typeof window === "undefined") return null;
 
-const STORAGE_KEYS = {
-  lojaId: "aurora_loja_id",
-  lojaSlug: "aurora_loja_slug",
-  lojaNome: "aurora_loja_nome",
-  lojaEmail: "aurora_loja_responsavel_email",
-};
+  try {
+    const local = window.localStorage.getItem(CHAVE_SESSAO);
+    if (local) {
+      const sessao = JSON.parse(local) as SessaoLoja;
+      if (sessao?.loja && sessao?.login) return sessao;
+    }
 
-const LOJA_ID_FIXA = "36dbb2e4-d499-44d3-b3e1-313c0f41993e";
+    const sessaoAtual = window.sessionStorage.getItem(CHAVE_SESSAO);
+    if (sessaoAtual) {
+      const sessao = JSON.parse(sessaoAtual) as SessaoLoja;
+      if (sessao?.loja && sessao?.login) return sessao;
+    }
 
-function lerReferenciaLocal(): ReferenciaLocal {
-  if (typeof window === "undefined") {
-    return {
-      lojaId: null,
-      lojaSlug: null,
-      lojaNome: null,
-    };
+    return null;
+  } catch {
+    return null;
   }
+}
 
+function limparSessao() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(CHAVE_SESSAO);
+  window.sessionStorage.removeItem(CHAVE_SESSAO);
+}
+
+function cardBase(): React.CSSProperties {
   return {
-    lojaId: window.localStorage.getItem(STORAGE_KEYS.lojaId),
-    lojaSlug: window.localStorage.getItem(STORAGE_KEYS.lojaSlug),
-    lojaNome: window.localStorage.getItem(STORAGE_KEYS.lojaNome),
+    background: "#ffffff",
+    borderRadius: 24,
+    border: "1px solid #dbe4ea",
+    padding: 22,
+    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
   };
 }
 
-function salvarReferenciaLocal(loja: LojaPayload) {
-  if (typeof window === "undefined") return;
-
-  if (loja.id) {
-    window.localStorage.setItem(STORAGE_KEYS.lojaId, loja.id);
-  }
-
-  if (loja.slug) {
-    window.localStorage.setItem(STORAGE_KEYS.lojaSlug, loja.slug);
-  }
-
-  if (loja.nome_loja) {
-    window.localStorage.setItem(STORAGE_KEYS.lojaNome, loja.nome_loja);
-  }
-
-  if (loja.responsavel_email) {
-    window.localStorage.setItem(
-      STORAGE_KEYS.lojaEmail,
-      loja.responsavel_email,
-    );
-  }
+function badgeStyle(
+  cor = "#0f766e",
+  fundo = "#ecfeff",
+  borda = "#a5f3fc",
+): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 999,
+    padding: "7px 12px",
+    background: fundo,
+    border: `1px solid ${borda}`,
+    color: cor,
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+  };
 }
 
-function formatarPlano(plano: string | null | undefined) {
-  if (!plano) return "Não definido";
-  return plano.charAt(0).toUpperCase() + plano.slice(1).toLowerCase();
-}
-
-function formatarStatus(status: string | null | undefined) {
-  if (!status) return "Em atualização";
-  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-}
-
-function formatarValidade(data: string | null | undefined) {
-  if (!data) return "Sem validade definida";
-
-  const parsed = new Date(data);
-  if (Number.isNaN(parsed.getTime())) return "Sem validade definida";
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "long",
-  }).format(parsed);
-}
-
-function montarUrlBuscaLoja() {
-  if (typeof window === "undefined") {
-    return `/api/lojas/configurar?id=${LOJA_ID_FIXA}`;
-  }
-
-  const lojaId =
-    window.localStorage.getItem(STORAGE_KEYS.lojaId) || LOJA_ID_FIXA;
-
-  return `/api/lojas/configurar?id=${encodeURIComponent(lojaId)}`;
-}
-
-function CardResumo({
-  titulo,
-  valor,
-  descricao,
-}: {
-  titulo: string;
-  valor: string;
-  descricao: string;
-}) {
-  return (
-    <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-        {titulo}
-      </p>
-      <h3 className="mt-3 text-lg font-bold text-slate-900">{valor}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{descricao}</p>
-    </div>
-  );
-}
-
-function CardArea({
-  rotulo,
+function AreaCard({
+  badge,
   titulo,
   descricao,
   href,
-  cta,
 }: {
-  rotulo: string;
+  badge: string;
   titulo: string;
   descricao: string;
   href: string;
-  cta: string;
 }) {
   return (
-    <article className="rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-        {rotulo}
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        display: "block",
+        background: "#ffffff",
+        borderRadius: 24,
+        border: "1px solid #dbe4ea",
+        padding: 22,
+        boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
+      }}
+    >
+      <div style={{ ...badgeStyle(), marginBottom: 14 }}>{badge}</div>
+
+      <h2
+        style={{
+          margin: 0,
+          color: "#0f172a",
+          fontSize: 22,
+          lineHeight: 1.2,
+        }}
+      >
+        {titulo}
+      </h2>
+
+      <p
+        style={{
+          marginTop: 12,
+          marginBottom: 0,
+          color: "#475569",
+          lineHeight: 1.8,
+          fontSize: 15,
+        }}
+      >
+        {descricao}
       </p>
-      <h3 className="mt-2 text-xl font-bold text-slate-900">{titulo}</h3>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{descricao}</p>
-      <div className="mt-5">
-        <Link
-          href={href}
-          className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-        >
-          {cta}
-        </Link>
-      </div>
-    </article>
+    </Link>
   );
 }
 
-export default function IrmaosHomePage() {
+export default function IrmaosPage() {
+  const [sessao, setSessao] = useState<SessaoLoja | null>(null);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
-  const [loja, setLoja] = useState<LojaPayload | null>(null);
-  const [referenciaLocal, setReferenciaLocal] = useState<ReferenciaLocal>({
-    lojaId: null,
-    lojaSlug: null,
-    lojaNome: null,
-  });
 
   useEffect(() => {
-    protegerPagina();
-  }, []);
+    const sessaoAtual = lerSessaoCompleta();
 
-  useEffect(() => {
-    let ativo = true;
-
-    async function carregar() {
-      try {
-        setCarregando(true);
-        setErro(null);
-
-        const referenciaInicial = lerReferenciaLocal();
-        if (ativo) {
-          setReferenciaLocal(referenciaInicial);
-        }
-
-        const response = await fetch(montarUrlBuscaLoja(), {
-          method: "GET",
-          cache: "no-store",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Falha ao carregar a loja. Status: ${response.status}`);
-        }
-
-        const data = (await response.json()) as ApiResponse;
-
-        if (!ativo) return;
-
-        if (data.success && data.loja?.id) {
-          setLoja(data.loja);
-          salvarReferenciaLocal(data.loja);
-          setReferenciaLocal({
-            lojaId: data.loja.id ?? null,
-            lojaSlug: data.loja.slug ?? null,
-            lojaNome: data.loja.nome_loja ?? null,
-          });
-          return;
-        }
-
-        setLoja(null);
-      } catch (error) {
-        if (!ativo) return;
-
-        const mensagem =
-          error instanceof Error
-            ? error.message
-            : "Não foi possível carregar os dados da loja.";
-
-        setErro(mensagem);
-      } finally {
-        if (ativo) {
-          setCarregando(false);
-        }
+    if (!sessaoAtual) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
       }
+      return;
     }
 
-    carregar();
-
-    return () => {
-      ativo = false;
-    };
+    setSessao(sessaoAtual);
+    setCarregando(false);
   }, []);
 
-  const baseVinculada = useMemo(() => {
-    return Boolean(loja?.id || referenciaLocal.lojaId);
-  }, [loja?.id, referenciaLocal.lojaId]);
+  const areas = useMemo(
+    () => [
+      {
+        badge: "Família",
+        titulo: "Família e base social",
+        descricao:
+          "Cadastro familiar protegido para irmãos, cunhadas, sobrinhos, netos e registros vinculados à memória institucional.",
+        href: "/irmaos/familia",
+      },
+      {
+        badge: "Histórico",
+        titulo: "Histórico institucional",
+        descricao:
+          "Área reservada para memória histórica, eventos marcantes, registros internos e expansão organizada da base da loja.",
+        href: "/irmaos/historico",
+      },
+      {
+        badge: "Documentos",
+        titulo: "Documentos protegidos",
+        descricao:
+          "Downloads, arquivos internos, materiais reservados, documentos da loja e conteúdos liberados conforme o acesso.",
+        href: "/irmaos/documentos",
+      },
+      {
+        badge: "Agenda",
+        titulo: "Agenda dos irmãos",
+        descricao:
+          "Compromissos, solenidades, reuniões, aniversários e organização da rotina institucional com leitura clara.",
+        href: "/irmaos/agenda",
+      },
+      {
+        badge: "Cargos",
+        titulo: "Estrutura de cargos",
+        descricao:
+          "Entrada para leitura institucional dos cargos, responsabilidades e expansão do controle por papel dentro da loja.",
+        href: "/cargos",
+      },
+      {
+        badge: "Minha área",
+        titulo: "Minha área institucional",
+        descricao:
+          "Área pessoal preparada para evolução do acesso do irmão, consulta de dados e leitura protegida da sessão atual.",
+        href: "/minha-area",
+      },
+    ],
+    [],
+  );
 
-  const nomeExibicao = useMemo(() => {
-    return loja?.nome_loja || referenciaLocal.lojaNome || "Loja Maçônica Aurora";
-  }, [loja?.nome_loja, referenciaLocal.lojaNome]);
+  if (carregando) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background:
+            "linear-gradient(180deg, #f7fbf8 0%, #eef7f1 50%, #f7fbf8 100%)",
+          padding: "24px 16px 56px",
+          fontFamily: "Arial, Helvetica, sans-serif",
+        }}
+      >
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <section
+            style={{
+              ...cardBase(),
+              background:
+                "linear-gradient(135deg, #052e2b 0%, #065f46 55%, #059669 100%)",
+              color: "#ffffff",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 30px 80px rgba(5, 46, 43, 0.24)",
+            }}
+          >
+            <div
+              style={{
+                ...badgeStyle(
+                  "#dcfce7",
+                  "rgba(255,255,255,0.12)",
+                  "rgba(255,255,255,0.18)",
+                ),
+                marginBottom: 16,
+              }}
+            >
+              Área interna protegida
+            </div>
 
-  const planoExibicao = useMemo(() => {
-    return formatarPlano(loja?.plano);
-  }, [loja?.plano]);
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(2rem, 4vw, 3rem)",
+                lineHeight: 1.05,
+              }}
+            >
+              Validando acesso dos irmãos
+            </h1>
 
-  const statusExibicao = useMemo(() => {
-    return formatarStatus(loja?.status);
-  }, [loja?.status]);
-
-  const localizacaoExibicao = useMemo(() => {
-    const cidade = loja?.cidade?.trim();
-    const estado = loja?.estado?.trim();
-
-    if (cidade && estado) return `${cidade} • ${estado}`;
-    if (cidade) return cidade;
-    if (estado) return estado;
-
-    return "Uso interno com acesso controlado";
-  }, [loja?.cidade, loja?.estado]);
-
-  const validadeExibicao = useMemo(() => {
-    if (loja?.courtesy_expires_at) {
-      return `Cortesia válida até ${formatarValidade(loja.courtesy_expires_at)}`;
-    }
-
-    if ((loja?.plano || "").toLowerCase() === "premium") {
-      return "Plano premium ativo no Supabase";
-    }
-
-    if ((loja?.status || "").toLowerCase() === "ativa") {
-      return "Base ativa e pronta para evolução";
-    }
-
-    return "Status em atualização";
-  }, [loja?.courtesy_expires_at, loja?.plano, loja?.status]);
+            <p
+              style={{
+                marginTop: 16,
+                marginBottom: 0,
+                maxWidth: 760,
+                color: "rgba(255,255,255,0.92)",
+                lineHeight: 1.8,
+                fontSize: 16,
+              }}
+            >
+              Aguarde um instante. Estamos conferindo a sessão para proteger os
+              dados institucionais da loja, os cargos, os cadastros e os
+              documentos reservados.
+            </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.10),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#ffffff,_#f0fdf4)] text-slate-900">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-[2rem] border border-emerald-100/80 bg-white shadow-[0_24px_70px_-34px_rgba(22,163,74,0.22)]">
-          <div className="border-b border-emerald-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 px-6 py-7 text-white">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-4xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
-                  Aurora Loja Maçônica
-                </p>
-                <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                  Área interna da loja
-                </h1>
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 sm:text-base">
-                  Sistema restrito da loja com acesso controlado, leitura
-                  protegida, organização institucional e evolução segura em
-                  padrão verde premium.
-                </p>
-
-                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-emerald-100">
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-                    {nomeExibicao}
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
-                    {localizacaoExibicao}
-                  </span>
-                  <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5">
-                    {planoExibicao}
-                  </span>
-                </div>
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(180deg, #f7fbf8 0%, #eef7f1 50%, #f7fbf8 100%)",
+        padding: "24px 16px 56px",
+        fontFamily: "Arial, Helvetica, sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 1260, margin: "0 auto" }}>
+        <section
+          style={{
+            ...cardBase(),
+            background:
+              "linear-gradient(135deg, #052e2b 0%, #065f46 55%, #059669 100%)",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 30px 80px rgba(5, 46, 43, 0.24)",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: 20,
+              alignItems: "stretch",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  ...badgeStyle(
+                    "#dcfce7",
+                    "rgba(255,255,255,0.12)",
+                    "rgba(255,255,255,0.18)",
+                  ),
+                  marginBottom: 16,
+                }}
+              >
+                Área interna dos irmãos
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.88)",
+                  marginBottom: 10,
+                }}
+              >
+                Aurora Loja Maçônica
+              </div>
+
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(2rem, 4vw, 3rem)",
+                  lineHeight: 1.05,
+                }}
+              >
+                Ambiente institucional protegido para irmãos autorizados
+              </h1>
+
+              <p
+                style={{
+                  marginTop: 16,
+                  marginBottom: 0,
+                  maxWidth: 760,
+                  color: "rgba(255,255,255,0.92)",
+                  lineHeight: 1.8,
+                  fontSize: 16,
+                }}
+              >
+                Acesso reservado para leitura institucional, base familiar,
+                histórico, documentos, agenda e expansão da estrutura interna da
+                loja com segurança.
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginTop: 22,
+                }}
+              >
                 <Link
                   href="/"
-                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                  style={{
+                    textDecoration: "none",
+                    background: "#ffffff",
+                    color: "#065f46",
+                    padding: "12px 18px",
+                    borderRadius: 16,
+                    fontWeight: 800,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    boxShadow: "0 12px 28px rgba(15, 23, 42, 0.08)",
+                  }}
                 >
-                  Home
+                  Voltar à home
                 </Link>
+
                 <Link
-                  href="/planos"
-                  className="rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-center text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/25"
+                  href="/login"
+                  style={{
+                    textDecoration: "none",
+                    background: "rgba(255,255,255,0.10)",
+                    color: "#ffffff",
+                    padding: "12px 18px",
+                    borderRadius: 16,
+                    fontWeight: 800,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                  }}
                 >
-                  Planos
+                  Revisar acesso
                 </Link>
-                <Link
-                  href="/configurar-loja"
-                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    limparSessao();
+                    window.location.href = "/login";
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    background: "rgba(255,255,255,0.10)",
+                    color: "#ffffff",
+                    padding: "12px 18px",
+                    borderRadius: 16,
+                    fontWeight: 800,
+                    border: "1px solid rgba(255,255,255,0.18)",
+                  }}
                 >
-                  Configurar loja
-                </Link>
-                <Link
-                  href="/downloads"
-                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                  Encerrar sessão
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                borderRadius: 24,
+                padding: 20,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.8,
+                  color: "rgba(255,255,255,0.92)",
+                }}
+              >
+                <strong>Sessão validada.</strong> Esta leitura confirma que o
+                acesso foi liberado para a área interna da loja sem expor dados
+                reservados a visitantes externos.
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 18,
+                    padding: 16,
+                  }}
                 >
-                  Downloads
-                </Link>
+                  <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>
+                    Loja
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {sessao?.loja ?? "Não identificado"}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 18,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>
+                    Plano
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {sessao?.plano ?? "Sem plano"}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 18,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>
+                    Status
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {sessao?.status ?? "Sem status"}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    borderRadius: 18,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>
+                    Papel
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {sessao?.papel ?? "Sem papel"}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </section>
 
-          <div className="bg-gradient-to-b from-white to-slate-50/70 px-6 py-6">
-            <div className="grid gap-4 lg:grid-cols-4">
-              <CardResumo
-                titulo="Loja vinculada"
-                valor={nomeExibicao}
-                descricao={
-                  baseVinculada
-                    ? "Base institucional vinculada com sucesso."
-                    : "Aguardando vinculação da base institucional."
-                }
-              />
-
-              <CardResumo
-                titulo="Plano atual"
-                valor={planoExibicao}
-                descricao="Leitura refletida com base real do Supabase."
-              />
-
-              <CardResumo
-                titulo="Status da loja"
-                valor={statusExibicao}
-                descricao={
-                  loja?.configuracao_concluida
-                    ? "Configuração concluída e ambiente pronto para uso."
-                    : "Complete a configuração para consolidar a base."
-                }
-              />
-
-              <CardResumo
-                titulo="Validade / cortesia"
-                valor="Base ativa"
-                descricao={validadeExibicao}
-              />
+        <section
+          style={{
+            marginTop: 22,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 10 }}>Situação</div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                color: "#0f172a",
+                marginBottom: 10,
+              }}
+            >
+              Sessão ativa
             </div>
+            <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
+              O ambiente interno foi liberado com leitura válida da sessão da
+              loja.
+            </p>
           </div>
-        </div>
 
-        {carregando ? (
-          <div className="rounded-[1.75rem] border border-emerald-100 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
-            Carregando leitura real da loja no Supabase...
+          <div style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 10 }}>Acesso</div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                color: "#0f172a",
+                marginBottom: 10,
+              }}
+            >
+              Protegido
+            </div>
+            <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
+              Cadastros, cargos, documentos e memória seguem atrás de login.
+            </p>
           </div>
-        ) : null}
 
-        {erro ? (
-          <div className="rounded-[1.75rem] border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-800 shadow-sm">
-            <strong>Falha de leitura:</strong> {erro}
+          <div style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 10 }}>Plano</div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 900,
+                color: "#0f172a",
+                marginBottom: 10,
+              }}
+            >
+              {sessao?.plano ?? "Cortesia"}
+            </div>
+            <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
+              Base pronta para expansão futura sem quebrar o que já funciona.
+            </p>
           </div>
-        ) : null}
 
-        {!carregando && !erro && baseVinculada ? (
-          <div className="rounded-[1.75rem] border border-emerald-100 bg-white shadow-sm">
-            <div className="border-b border-emerald-50 bg-gradient-to-r from-emerald-50 to-white px-5 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-                Leitura geral da loja
-              </p>
-              <h2 className="mt-2 text-xl font-bold text-slate-900">
-                {nomeExibicao}
-              </h2>
+          <div style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 10 }}>Responsável</div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: "#0f172a",
+                marginBottom: 10,
+                lineHeight: 1.3,
+              }}
+            >
+              {sessao?.login ?? "Sem leitura"}
+            </div>
+            <p style={{ margin: 0, color: "#475569", lineHeight: 1.7 }}>
+              Leitura da sessão atual vinculada ao acesso institucional da loja.
+            </p>
+          </div>
+        </section>
+
+        <section
+          style={{
+            marginTop: 24,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 18,
+          }}
+        >
+          {areas.map((area) => (
+            <AreaCard
+              key={area.titulo}
+              badge={area.badge}
+              titulo={area.titulo}
+              descricao={area.descricao}
+              href={area.href}
+            />
+          ))}
+        </section>
+
+        <section
+          style={{
+            marginTop: 24,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 18,
+          }}
+        >
+          <section style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura institucional</div>
+
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#0f172a",
+                fontSize: 26,
+                lineHeight: 1.15,
+              }}
+            >
+              Acesso dos irmãos com segurança da loja
+            </h2>
+
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 22,
+                color: "#475569",
+                lineHeight: 1.9,
+                fontSize: 15,
+              }}
+            >
+              <li>A área dos irmãos exige sessão ativa para abrir.</li>
+              <li>Sem login válido, o sistema retorna para a tela de acesso.</li>
+              <li>Cadastros, cargos, documentos e memória ficam protegidos.</li>
+              <li>
+                Esta base já está pronta para evoluir depois para autenticação
+                mais forte.
+              </li>
+            </ul>
+          </section>
+
+          <section style={cardBase()}>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Próximos passos</div>
+
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#0f172a",
+                fontSize: 26,
+                lineHeight: 1.15,
+              }}
+            >
+              Expansão interna da loja
+            </h2>
+
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 22,
+                color: "#475569",
+                lineHeight: 1.9,
+                fontSize: 15,
+              }}
+            >
+              <li>Subir a logo real da loja na área interna.</li>
+              <li>Fortalecer a sessão para autenticação institucional futura.</li>
+              <li>Refinar permissões por cargo conforme a hierarquia da loja.</li>
+              <li>Conectar os módulos internos à leitura real de usuários.</li>
+            </ul>
+          </section>
+
+          <section
+            style={{
+              ...cardBase(),
+              background: "linear-gradient(180deg, #ffffff 0%, #f6fffb 100%)",
+              border: "1px solid #b7f0d7",
+            }}
+          >
+            <div
+              style={{
+                ...badgeStyle("#166534", "#dcfce7", "#86efac"),
+                marginBottom: 14,
+              }}
+            >
+              Orientações e informações
             </div>
 
-            <div className="grid gap-4 px-5 py-5 md:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
-                  Plano
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {planoExibicao}
-                </p>
-              </div>
+            <h2
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#0f172a",
+                fontSize: 26,
+                lineHeight: 1.15,
+              }}
+            >
+              Atendimento oficial via WhatsApp
+            </h2>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
-                  Status
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {statusExibicao}
-                </p>
-              </div>
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: 14,
+                color: "#475569",
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Para orientações, informações e apoio de atendimento, fale
+              diretamente pelo canal oficial da loja.
+            </p>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
-                  Acesso
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  Liberado
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
-                  Perfil
-                </p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  Uso interno protegido
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {!carregando && !erro && !baseVinculada ? (
-          <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-sm">
-            <strong>Base local não vinculada:</strong> nenhuma referência da loja
-            foi encontrada no navegador e a API não retornou uma loja válida.
-            Complete a configuração inicial para vincular a base.
-          </div>
-        ) : null}
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <CardArea
-            rotulo="Configuração institucional"
-            titulo="Completar configuração"
-            descricao="Complete os dados institucionais da loja para evoluir a base com segurança, manter a identidade protegida e preparar os próximos módulos com leitura premium."
-            href="/configurar-loja"
-            cta="Completar configuração"
-          />
-
-          <CardArea
-            rotulo="Família e histórico"
-            titulo="Cadastre familiares e preserve a memória institucional"
-            descricao="Cadastre familiares, preserve memória institucional e mantenha a base organizada com leitura elegante no celular e no computador."
-            href="/irmaos/familia"
-            cta="Ir para família"
-          />
-
-          <CardArea
-            rotulo="Documentos protegidos"
-            titulo="Arquivos internos e materiais reservados"
-            descricao="Acesse arquivos internos, downloads, registros e materiais reservados com acesso controlado e leitura institucional premium."
-            href="/downloads"
-            cta="Abrir área"
-          />
-
-          <CardArea
-            rotulo="Agenda institucional"
-            titulo="Reuniões, solenidades e compromissos"
-            descricao="Organize reuniões, solenidades, aniversários e compromissos com leitura clara no celular e no computador."
-            href="/agenda"
-            cta="Abrir área"
-          />
-        </div>
-
-        <div className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-                Organização da loja
-              </p>
-              <h3 className="mt-2 text-lg font-bold text-slate-900">
-                Configurar minha loja
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Complete os dados institucionais da loja para evoluir a base com
-                segurança, padrão premium e estrutura pronta para irmãos
-                autorizados.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/configurar-loja"
-                className="inline-flex rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gap: 4,
+                  padding: "14px 16px",
+                  borderRadius: 18,
+                  background: "#ffffff",
+                  border: "1px solid #d1fae5",
+                }}
               >
-                Abrir área
-              </Link>
-              <Link
-                href="/cargos"
-                className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-              >
-                Cargos
-              </Link>
-              <Link
-                href="/financeiro"
-                className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
-              >
-                Financeiro
-              </Link>
-            </div>
-          </div>
-        </div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    color: "#166534",
+                  }}
+                >
+                  WhatsApp oficial
+                </span>
+                <strong
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 1.2,
+                    color: "#0f172a",
+                  }}
+                >
+                  {WHATSAPP_NUMERO_FORMATADO}
+                </strong>
+              </div>
 
-        <footer className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
-          Sistema em constante atualização. O painel agora pode refletir o plano
-          e a validade reais da loja a partir do Supabase, mantendo a evolução
-          institucional com estabilidade e leitura premium.
-        </footer>
-      </section>
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 16,
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  color: "#166534",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  lineHeight: 1.7,
+                }}
+              >
+                Atendimento somente via WhatsApp.
+              </div>
+            </div>
+
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 48,
+                padding: "0 18px",
+                borderRadius: 16,
+                textDecoration: "none",
+                fontWeight: 800,
+                background: "linear-gradient(135deg, #166534 0%, #22c55e 100%)",
+                color: "#ffffff",
+                boxShadow: "0 16px 35px rgba(34, 197, 94, 0.18)",
+              }}
+            >
+              Falar no WhatsApp
+            </a>
+          </section>
+        </section>
+      </div>
     </main>
   );
 }

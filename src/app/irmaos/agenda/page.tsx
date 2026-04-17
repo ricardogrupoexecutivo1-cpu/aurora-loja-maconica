@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protegerRota } from "@/lib/authGuard";
 
 type TipoEvento =
   | "Reunião"
@@ -83,6 +84,9 @@ function baixarJson(nomeArquivo: string, conteudo: unknown) {
 }
 
 export default function AgendaPage() {
+  const [liberado, setLiberado] = useState(false);
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+
   const [eventos, setEventos] = useState<EventoAgenda[]>([]);
   const [form, setForm] = useState(FORM_INICIAL);
   const [carregando, setCarregando] = useState(true);
@@ -92,6 +96,18 @@ export default function AgendaPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
+    const sessao = protegerRota();
+
+    if (sessao) {
+      setLiberado(true);
+    }
+
+    setVerificandoAcesso(false);
+  }, []);
+
+  useEffect(() => {
+    if (!liberado) return;
+
     try {
       const salvo = localStorage.getItem(STORAGE_KEY);
       if (salvo) {
@@ -105,17 +121,17 @@ export default function AgendaPage() {
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [liberado]);
 
   useEffect(() => {
-    if (carregando) return;
+    if (!liberado || carregando) return;
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(eventos));
     } catch {
       setErro("Não foi possível atualizar a base local automaticamente.");
     }
-  }, [eventos, carregando]);
+  }, [eventos, carregando, liberado]);
 
   const eventosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -123,7 +139,7 @@ export default function AgendaPage() {
     const baseOrdenada = [...eventos].sort(
       (a, b) =>
         new Date(a.data || a.criadoEm).getTime() -
-        new Date(b.data || b.criadoEm).getTime()
+        new Date(b.data || b.criadoEm).getTime(),
     );
 
     if (!termo) return baseOrdenada;
@@ -140,7 +156,7 @@ export default function AgendaPage() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(termo)
+        .includes(termo),
     );
   }, [eventos, busca]);
 
@@ -186,17 +202,14 @@ export default function AgendaPage() {
   }
 
   function baixarBase() {
-    baixarJson(
-      `agenda-irmao-${new Date().toISOString().slice(0, 10)}.json`,
-      {
-        sistema: "Aurora Loja Maçônica",
-        modulo: "Agenda e lembretes",
-        exportadoEm: new Date().toISOString(),
-        irmaoVinculado: IRMAO_FIXO,
-        totalRegistros: eventos.length,
-        registros: eventos,
-      }
-    );
+    baixarJson(`agenda-irmao-${new Date().toISOString().slice(0, 10)}.json`, {
+      sistema: "Aurora Loja Maçônica",
+      modulo: "Agenda e lembretes",
+      exportadoEm: new Date().toISOString(),
+      irmaoVinculado: IRMAO_FIXO,
+      totalRegistros: eventos.length,
+      registros: eventos,
+    });
 
     setMensagem("Download da base local gerado com sucesso.");
     setErro("");
@@ -247,6 +260,29 @@ export default function AgendaPage() {
     }
   }
 
+  if (verificandoAcesso) {
+    return (
+      <main style={styles.page}>
+        <div style={styles.pageGlowOne} />
+        <div style={styles.pageGlowTwo} />
+
+        <section style={styles.guardWrap}>
+          <div style={styles.guardCard}>
+            <div style={styles.guardBadge}>Aurora Loja Maçônica</div>
+            <h1 style={styles.guardTitle}>Verificando acesso institucional</h1>
+            <p style={styles.guardText}>
+              Aguarde um instante enquanto validamos o ambiente protegido da loja.
+            </p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!liberado) {
+    return null;
+  }
+
   return (
     <main style={styles.page}>
       <div style={styles.pageGlowOne} />
@@ -280,8 +316,8 @@ export default function AgendaPage() {
               </div>
 
               <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta área pode passar por melhorias
-                visuais, operacionais e de calendário durante a evolução da plataforma.
+                <strong>Sistema em constante atualização.</strong> Esta área pode passar por
+                melhorias visuais, operacionais e de calendário durante a evolução da plataforma.
               </div>
             </div>
 
@@ -368,7 +404,8 @@ export default function AgendaPage() {
               <div>
                 <h2 style={styles.cardTitle}>Novo evento</h2>
                 <p style={styles.cardSubtitle}>
-                  Organize compromissos, lembretes e datas importantes com visual bonito e base protegida.
+                  Organize compromissos, lembretes e datas importantes com visual bonito e base
+                  protegida.
                 </p>
               </div>
 
@@ -388,7 +425,7 @@ export default function AgendaPage() {
                   <span style={styles.label}>Tipo</span>
                   <select
                     value={form.tipo}
-                    onChange={(e) => atualizarCampo("tipo", e.target.value)}
+                    onChange={(e) => atualizarCampo("tipo", e.target.value as TipoEvento)}
                     style={styles.select}
                   >
                     <option value="Reunião">Reunião</option>
@@ -649,6 +686,57 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     position: "relative",
     zIndex: 1,
+  },
+  guardWrap: {
+    maxWidth: 920,
+    margin: "0 auto",
+    minHeight: "calc(100vh - 84px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  guardCard: {
+    width: "100%",
+    maxWidth: 560,
+    background: "rgba(255,255,255,0.88)",
+    backdropFilter: "blur(14px)",
+    border: "1px solid rgba(134,239,172,0.26)",
+    borderRadius: 32,
+    padding: 28,
+    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
+    display: "grid",
+    gap: 14,
+    textAlign: "center",
+  },
+  guardBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    justifySelf: "center",
+    padding: "9px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    background: "rgba(34,197,94,0.12)",
+    color: "#166534",
+    border: "1px solid rgba(34,197,94,0.18)",
+  },
+  guardTitle: {
+    margin: 0,
+    fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+    lineHeight: 1.08,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  guardText: {
+    margin: 0,
+    fontSize: 15,
+    lineHeight: 1.7,
+    color: "#355244",
   },
   hero: {
     background: "rgba(255,255,255,0.84)",

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { protegerRota } from "@/lib/authGuard";
 
 type TipoHistorico =
   | "Iniciação"
@@ -86,6 +87,9 @@ function baixarJson(nomeArquivo: string, conteudo: unknown) {
 }
 
 export default function HistoricoMaconicoPage() {
+  const [liberado, setLiberado] = useState(false);
+  const [verificandoAcesso, setVerificandoAcesso] = useState(true);
+
   const [registros, setRegistros] = useState<RegistroHistorico[]>([]);
   const [form, setForm] = useState(FORM_INICIAL);
   const [carregando, setCarregando] = useState(true);
@@ -95,6 +99,18 @@ export default function HistoricoMaconicoPage() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
+    const sessao = protegerRota();
+
+    if (sessao) {
+      setLiberado(true);
+    }
+
+    setVerificandoAcesso(false);
+  }, []);
+
+  useEffect(() => {
+    if (!liberado) return;
+
     try {
       const salvo = localStorage.getItem(STORAGE_KEY);
       if (salvo) {
@@ -108,23 +124,25 @@ export default function HistoricoMaconicoPage() {
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [liberado]);
 
   useEffect(() => {
-    if (carregando) return;
+    if (!liberado || carregando) return;
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
     } catch {
       setErro("Não foi possível atualizar a base local automaticamente.");
     }
-  }, [registros, carregando]);
+  }, [registros, carregando, liberado]);
 
   const registrosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     if (!termo) {
       return [...registros].sort(
-        (a, b) => new Date(b.data || b.criadoEm).getTime() - new Date(a.data || a.criadoEm).getTime()
+        (a, b) =>
+          new Date(b.data || b.criadoEm).getTime() -
+          new Date(a.data || a.criadoEm).getTime(),
       );
     }
 
@@ -142,21 +160,23 @@ export default function HistoricoMaconicoPage() {
         ]
           .join(" ")
           .toLowerCase()
-          .includes(termo)
+          .includes(termo),
       )
       .sort(
-        (a, b) => new Date(b.data || b.criadoEm).getTime() - new Date(a.data || a.criadoEm).getTime()
+        (a, b) =>
+          new Date(b.data || b.criadoEm).getTime() -
+          new Date(a.data || a.criadoEm).getTime(),
       );
   }, [registros, busca]);
 
   const totalRegistros = registros.length;
   const totalCargos = registros.filter((item) => item.tipo === "Cargo").length;
   const totalEventos = registros.filter(
-    (item) => item.tipo === "Evento" || item.tipo === "Comissão"
+    (item) => item.tipo === "Evento" || item.tipo === "Comissão",
   ).length;
   const ultimoRegistro = registros.length
     ? [...registros].sort(
-        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime()
+        (a, b) => new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime(),
       )[0]
     : null;
 
@@ -204,7 +224,7 @@ export default function HistoricoMaconicoPage() {
         irmaoVinculado: IRMAO_FIXO,
         totalRegistros: registros.length,
         registros,
-      }
+      },
     );
 
     setMensagem("Download do histórico gerado com sucesso.");
@@ -257,6 +277,29 @@ export default function HistoricoMaconicoPage() {
     }
   }
 
+  if (verificandoAcesso) {
+    return (
+      <main style={styles.page}>
+        <div style={styles.pageGlowOne} />
+        <div style={styles.pageGlowTwo} />
+
+        <section style={styles.guardWrap}>
+          <div style={styles.guardCard}>
+            <div style={styles.guardBadge}>Aurora Loja Maçônica</div>
+            <h1 style={styles.guardTitle}>Verificando acesso institucional</h1>
+            <p style={styles.guardText}>
+              Aguarde um instante enquanto validamos o ambiente protegido da loja.
+            </p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!liberado) {
+    return null;
+  }
+
   return (
     <main style={styles.page}>
       <div style={styles.pageGlowOne} />
@@ -274,9 +317,9 @@ export default function HistoricoMaconicoPage() {
               <h1 style={styles.title}>Histórico maçônico • Aurora Loja Maçônica</h1>
 
               <p style={styles.description}>
-                Área preparada para registrar trajetória do irmão, graus, cargos, eventos, comissões,
-                observações institucionais e marcos importantes da caminhada maçônica com leitura
-                elegante, protegida e pronta para expansão futura.
+                Área preparada para registrar trajetória do irmão, graus, cargos, eventos,
+                comissões, observações institucionais e marcos importantes da caminhada maçônica
+                com leitura elegante, protegida e pronta para expansão futura.
               </p>
 
               <div style={styles.heroActions}>
@@ -290,8 +333,8 @@ export default function HistoricoMaconicoPage() {
               </div>
 
               <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta área pode passar por melhorias
-                visuais, funcionais e institucionais durante a evolução da plataforma.
+                <strong>Sistema em constante atualização.</strong> Esta área pode passar por
+                melhorias visuais, funcionais e institucionais durante a evolução da plataforma.
               </div>
             </div>
 
@@ -325,7 +368,9 @@ export default function HistoricoMaconicoPage() {
 
                   <div style={styles.profileInfoItem}>
                     <span style={styles.profileLabel}>Base</span>
-                    <strong style={styles.profileValue}>Histórico maçônico institucional</strong>
+                    <strong style={styles.profileValue}>
+                      Histórico maçônico institucional
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -378,7 +423,8 @@ export default function HistoricoMaconicoPage() {
               <div>
                 <h2 style={styles.cardTitle}>Novo registro histórico</h2>
                 <p style={styles.cardSubtitle}>
-                  Salve marcos importantes da trajetória maçônica com elegância e organização protegida.
+                  Salve marcos importantes da trajetória maçônica com elegância e organização
+                  protegida.
                 </p>
               </div>
 
@@ -398,7 +444,7 @@ export default function HistoricoMaconicoPage() {
                   <span style={styles.label}>Tipo de registro</span>
                   <select
                     value={form.tipo}
-                    onChange={(e) => atualizarCampo("tipo", e.target.value)}
+                    onChange={(e) => atualizarCampo("tipo", e.target.value as TipoHistorico)}
                     style={styles.select}
                   >
                     <option value="Iniciação">Iniciação</option>
@@ -621,8 +667,8 @@ export default function HistoricoMaconicoPage() {
                 <div style={styles.readingItem}>
                   <strong style={styles.readingTitle}>Download local liberado</strong>
                   <p style={styles.readingText}>
-                    Seguimos sua regra de ouro: quando possível, manter botão de download para cópia
-                    local no PC ou no celular.
+                    Seguimos sua regra de ouro: quando possível, manter botão de download para
+                    cópia local no PC ou no celular.
                   </p>
                 </div>
               </div>
@@ -673,6 +719,57 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "0 auto",
     position: "relative",
     zIndex: 1,
+  },
+  guardWrap: {
+    maxWidth: 920,
+    margin: "0 auto",
+    minHeight: "calc(100vh - 84px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  guardCard: {
+    width: "100%",
+    maxWidth: 560,
+    background: "rgba(255,255,255,0.88)",
+    backdropFilter: "blur(14px)",
+    border: "1px solid rgba(134,239,172,0.26)",
+    borderRadius: 32,
+    padding: 28,
+    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
+    display: "grid",
+    gap: 14,
+    textAlign: "center",
+  },
+  guardBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    justifySelf: "center",
+    padding: "9px 14px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    background: "rgba(34,197,94,0.12)",
+    color: "#166534",
+    border: "1px solid rgba(34,197,94,0.18)",
+  },
+  guardTitle: {
+    margin: 0,
+    fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+    lineHeight: 1.08,
+    fontWeight: 900,
+    color: "#10231a",
+  },
+  guardText: {
+    margin: 0,
+    fontSize: 15,
+    lineHeight: 1.7,
+    color: "#355244",
   },
   hero: {
     background: "rgba(255,255,255,0.84)",

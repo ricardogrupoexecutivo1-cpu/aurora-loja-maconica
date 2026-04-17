@@ -1,717 +1,652 @@
-"use client";
-
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-  LOJA_ACESSO_CORTESIA_PADRAO,
-  criarPerfilLojaSimples,
-  resumoAcesso,
-} from "@/lib/loja-access";
-
-const STORAGE_KEY = "aurora-loja-maconica-auth";
-
-type SessaoLoja = {
-  autenticado: boolean;
-  nomeLoja: string;
-  login: string;
-  plano: string;
-  status: string;
-  role: string;
-  acessoLiberado: boolean;
+type ResumoItem = {
+  rotulo: string;
+  valor: string;
+  descricao: string;
 };
 
-const perfil = criarPerfilLojaSimples(LOJA_ACESSO_CORTESIA_PADRAO);
-const acesso = resumoAcesso(perfil);
-
-const AREAS = [
-  {
-    titulo: "Irmãos",
-    descricao:
-      "Painel central do irmão com acesso às áreas de família, histórico, documentos e agenda.",
-    href: "/irmaos",
-    status: "Liberado",
-  },
-  {
-    titulo: "Família",
-    descricao:
-      "Cadastro familiar protegido com memória social, observações institucionais e leitura elegante.",
-    href: "/irmaos/familia",
-    status: "Liberado",
-  },
-  {
-    titulo: "Histórico maçônico",
-    descricao:
-      "Trajetória do irmão com graus, cargos, marcos importantes, eventos e observações institucionais.",
-    href: "/irmaos/historico",
-    status: "Liberado",
-  },
-  {
-    titulo: "Documentos e downloads",
-    descricao:
-      "Espaço para fichas, comprovantes, atas, declarações e cópias locais seguras.",
-    href: "/irmaos/documentos",
-    status: "Liberado",
-  },
-  {
-    titulo: "Agenda e lembretes",
-    descricao:
-      "Reuniões, solenidades, aniversários e compromissos importantes da rotina institucional.",
-    href: "/irmaos/agenda",
-    status: "Liberado",
-  },
-];
+type AreaItem = {
+  titulo: string;
+  descricao: string;
+  href: string;
+};
 
 export default function HomePage() {
-  const [sessaoLogada, setSessaoLogada] = useState(false);
+  const resumo: ResumoItem[] = [
+    {
+      rotulo: "Loja",
+      valor: "Restrita",
+      descricao: "Uso interno com acesso controlado",
+    },
+    {
+      rotulo: "Plano atual",
+      valor: "Cortesia",
+      descricao: "Cadastro com liberação automática inicial",
+    },
+    {
+      rotulo: "Módulos liberados",
+      valor: "4",
+      descricao: "Família, histórico, documentos e agenda",
+    },
+    {
+      rotulo: "Acesso",
+      valor: "Imediato",
+      descricao: "Entrada prática em celular e computador",
+    },
+  ];
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+  const areas: AreaItem[] = [
+    {
+      titulo: "Área de irmãos",
+      descricao:
+        "Ambiente protegido para acesso interno, leitura institucional e expansão por cargos autorizados.",
+      href: "/irmaos",
+    },
+    {
+      titulo: "Família e histórico",
+      descricao:
+        "Cadastro familiar, memória social, histórico institucional e dados organizados com leitura elegante.",
+      href: "/irmaos/familia",
+    },
+    {
+      titulo: "Agenda institucional",
+      descricao:
+        "Reuniões, solenidades, compromissos e rotina da loja em um ambiente claro e pronto para crescer.",
+      href: "/agenda",
+    },
+    {
+      titulo: "Documentos protegidos",
+      descricao:
+        "Downloads, arquivos internos, declarações e materiais reservados sob login e acesso controlado.",
+      href: "/irmaos/documentos",
+    },
+  ];
 
-      if (!raw) {
-        setSessaoLogada(false);
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as SessaoLoja;
-      setSessaoLogada(Boolean(parsed?.autenticado && parsed?.acessoLiberado));
-    } catch {
-      setSessaoLogada(false);
-    }
-  }, []);
+  const acessos = [
+    { label: "Cargos", href: "/cargos" },
+    { label: "Financeiro", href: "/financeiro" },
+    { label: "Downloads", href: "/irmaos/documentos" },
+  ];
 
   return (
-    <main style={styles.page}>
-      <div style={styles.glowTop} />
-      <div style={styles.glowBottom} />
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(217,243,226,0.85), transparent 28%), radial-gradient(circle at bottom right, rgba(210,238,219,0.72), transparent 24%), linear-gradient(180deg, #f8fcf9 0%, #f1f8f4 52%, #edf6f1 100%)",
+        color: "#102418",
+        padding: "14px",
+      }}
+    >
+      <section
+        style={{
+          width: "100%",
+          maxWidth: "1180px",
+          margin: "0 auto 22px auto",
+          position: "relative",
+          overflow: "hidden",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,252,249,0.98) 100%)",
+          border: "1px solid rgba(200,226,209,0.95)",
+          borderRadius: "34px",
+          boxShadow:
+            "0 30px 90px rgba(18, 65, 39, 0.08), 0 10px 30px rgba(18, 65, 39, 0.05)",
+          padding: "22px",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            right: "-40px",
+            top: "-30px",
+            width: "220px",
+            height: "220px",
+            borderRadius: "999px",
+            background: "rgba(137, 220, 168, 0.22)",
+            filter: "blur(34px)",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "-60px",
+            bottom: "-60px",
+            width: "240px",
+            height: "240px",
+            borderRadius: "999px",
+            background: "rgba(184, 231, 202, 0.25)",
+            filter: "blur(36px)",
+            pointerEvents: "none",
+          }}
+        />
 
-      <section style={styles.container}>
-        <header style={styles.hero}>
-          <div style={styles.heroTop}>
-            <div style={styles.badge}>Sistema restrito da loja com acesso controlado</div>
-            <div style={styles.miniBadge}>Aurora Loja Maçônica</div>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "22px",
+          }}
+        >
+          {acessos.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                padding: "12px 16px",
+                borderRadius: "16px",
+                background: "rgba(255,255,255,0.88)",
+                color: "#18492f",
+                border: "1px solid rgba(198,225,208,0.95)",
+                fontWeight: 700,
+                boxShadow: "0 8px 20px rgba(18, 65, 39, 0.05)",
+              }}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: "20px",
+            alignItems: "stretch",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "999px",
+                padding: "10px 16px",
+                fontSize: "0.9rem",
+                fontWeight: 800,
+                background:
+                  "linear-gradient(180deg, rgba(236,255,242,1) 0%, rgba(220,247,231,1) 100%)",
+                border: "1px solid rgba(182,223,196,0.98)",
+                color: "#20623f",
+                marginBottom: "16px",
+              }}
+            >
+              Aurora Loja Maçônica
+            </span>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(2.2rem, 5vw, 3.35rem)",
+                lineHeight: 0.96,
+                letterSpacing: "-0.06em",
+                color: "#0b1f14",
+                fontWeight: 900,
+              }}
+            >
+              Sistema institucional premium com base protegida para irmãos,
+              família, memória, agenda e documentos.
+            </h1>
+
+            <p
+              style={{
+                margin: "16px 0 0 0",
+                color: "#486256",
+                lineHeight: 1.85,
+                fontSize: "1.04rem",
+                maxWidth: "700px",
+              }}
+            >
+              Plataforma profissional com leitura elegante, privacidade
+              institucional e experiência sólida no celular e no computador,
+              preparada para crescer com estabilidade e padrão premium.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "12px",
+                marginTop: "24px",
+              }}
+            >
+              <a
+                href="/irmaos"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  padding: "14px 20px",
+                  borderRadius: "18px",
+                  background:
+                    "linear-gradient(180deg, #17643f 0%, #125433 100%)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  boxShadow: "0 14px 30px rgba(23, 100, 63, 0.18)",
+                  minWidth: "210px",
+                }}
+              >
+                Acessar área interna
+              </a>
+
+              <a
+                href="/planos"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  padding: "14px 20px",
+                  borderRadius: "18px",
+                  background: "rgba(255,255,255,0.84)",
+                  color: "#18492f",
+                  border: "1px solid rgba(191,223,204,0.95)",
+                  fontWeight: 800,
+                  minWidth: "160px",
+                }}
+              >
+                Ver planos
+              </a>
+
+              <a
+                href="/configurar-loja"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  padding: "14px 20px",
+                  borderRadius: "18px",
+                  background:
+                    "linear-gradient(180deg, #c79a52 0%, #b8873f 100%)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  boxShadow: "0 14px 28px rgba(176, 141, 87, 0.18)",
+                  minWidth: "220px",
+                }}
+              >
+                Começar grátis por 90 dias
+              </a>
+            </div>
           </div>
 
-          <div style={styles.heroGrid}>
-            <div style={styles.heroMain}>
-              <h1 style={styles.title}>Aurora Loja Maçônica</h1>
-
-              <p style={styles.description}>
-                Plataforma institucional restrita para a organização da loja, com acesso por login,
-                separação de áreas por perfil, leitura protegida e crescimento seguro em padrão
-                verde premium.
-              </p>
-
-              <div style={styles.actions}>
-                <Link href="/irmaos" style={styles.primaryButton}>
-                  Entrar no painel dos irmãos
-                </Link>
-
-                <Link href="/irmaos/familia" style={styles.secondaryButton}>
-                  Abrir área família
-                </Link>
-
-                <Link href="/como-usar" style={styles.secondaryButton}>
-                  Como usar a plataforma
-                </Link>
-
-                {sessaoLogada ? (
-                  <a href="/memorial-aurora.txt" download style={styles.secondaryButton}>
-                    Baixar memorial
-                  </a>
-                ) : (
-                  <Link href="/login" style={styles.secondaryButton}>
-                    Login para downloads
-                  </Link>
-                )}
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(247,252,248,0.98) 100%)",
+                border: "1px solid rgba(195,228,208,0.82)",
+                boxShadow: "0 18px 50px rgba(16, 36, 24, 0.06)",
+                borderRadius: "28px",
+                padding: "18px",
+                height: "100%",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginBottom: "14px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "999px",
+                    padding: "9px 14px",
+                    fontSize: "0.9rem",
+                    fontWeight: 700,
+                    background: "rgba(225,246,233,0.92)",
+                    border: "1px solid rgba(190,225,202,0.95)",
+                    color: "#2a744b",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Acesso institucional
+                </span>
               </div>
 
-              <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta plataforma está evoluindo em
-                etapas seguras, preservando a estabilidade do que já foi publicado.
-              </div>
-            </div>
-
-            <aside style={styles.sidePanel}>
-              <div style={styles.profileCard}>
-                <div style={styles.profileHeader}>Leitura geral da loja</div>
-
-                <div style={styles.profileName}>{acesso.loja}</div>
-
-                <div style={styles.pillRow}>
-                  <span style={styles.pillDark}>{acesso.plano}</span>
-                  <span style={styles.pillLight}>{acesso.status}</span>
-                  <span style={styles.pillLight}>{acesso.role}</span>
-                </div>
-
-                <div style={styles.infoGrid}>
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Login principal</span>
-                    <strong style={styles.infoValue}>{perfil.login}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Plano</span>
-                    <strong style={styles.infoValue}>{acesso.plano}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Status</span>
-                    <strong style={styles.infoValue}>{acesso.status}</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Acesso</span>
-                    <strong style={styles.infoValue}>
-                      {acesso.acessoLiberado ? "Liberado" : "Bloqueado"}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                {[
+                  {
+                    rotulo: "Responsável",
+                    valor: "Ricardo Grupo Executivo",
+                  },
+                  {
+                    rotulo: "Plano",
+                    valor: "Cortesia",
+                  },
+                  {
+                    rotulo: "Status",
+                    valor: "Ativa",
+                  },
+                  {
+                    rotulo: "Liberação",
+                    valor: "Automática",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.rotulo}
+                    style={{
+                      background:
+                        "linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%)",
+                      border: "1px solid rgba(208,234,218,0.9)",
+                      borderRadius: "22px",
+                      padding: "16px",
+                      minWidth: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "0.82rem",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "#5b7668",
+                        marginBottom: "10px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.rotulo}
+                    </span>
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: "1.05rem",
+                        lineHeight: 1.35,
+                        color: "#0f2418",
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {item.valor}
                     </strong>
                   </div>
-                </div>
+                ))}
               </div>
-            </aside>
-          </div>
-        </header>
 
-        <section style={styles.metricGrid}>
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Loja</span>
-            <strong style={styles.metricValue}>Restrita</strong>
-            <span style={styles.metricHint}>Uso interno com acesso controlado</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Plano atual</span>
-            <strong style={styles.metricValue}>{acesso.plano}</strong>
-            <span style={styles.metricHint}>Sua loja pode permanecer em cortesia</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Módulos liberados</span>
-            <strong style={styles.metricValue}>4</strong>
-            <span style={styles.metricHint}>Família, histórico, documentos e agenda</span>
-          </article>
-
-          <article style={styles.metricCard}>
-            <span style={styles.metricLabel}>Downloads</span>
-            <strong style={styles.metricValue}>{sessaoLogada ? "Protegidos" : "Sob login"}</strong>
-            <span style={styles.metricHint}>
-              {sessaoLogada
-                ? "Downloads liberados somente com sessão autenticada"
-                : "Faça login para liberar materiais internos"}
-            </span>
-          </article>
-        </section>
-
-        <section style={styles.contentGrid}>
-          <article style={styles.mainCard}>
-            <div style={styles.sectionHeader}>
-              <div>
-                <h2 style={styles.sectionTitle}>Áreas principais</h2>
-                <p style={styles.sectionSubtitle}>
-                  Navegação rápida para as áreas institucionais já prontas.
+              <div
+                style={{
+                  marginTop: "14px",
+                  borderRadius: "24px",
+                  background:
+                    "linear-gradient(180deg, rgba(246,238,224,0.96), rgba(240,229,206,0.94))",
+                  border: "1px solid rgba(226, 207, 166, 0.95)",
+                  padding: "18px",
+                  color: "#5a4827",
+                }}
+              >
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "1.04rem",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Cortesia automática por até 90 dias
+                </strong>
+                <p
+                  style={{
+                    margin: 0,
+                    lineHeight: 1.75,
+                    fontSize: "0.98rem",
+                  }}
+                >
+                  Ao concluir a configuração inicial da loja, o sistema pode
+                  liberar a entrada em cortesia de forma prática, sem depender
+                  de WhatsApp e sem travar a conversão.
                 </p>
               </div>
-
-              <div style={styles.sectionTag}>Acesso interno</div>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <div style={styles.cardsGrid}>
-              {AREAS.map((item) => (
-                <Link key={item.titulo} href={item.href} style={styles.accessCard}>
-                  <div style={styles.accessTop}>
-                    <div style={styles.accessTitle}>{item.titulo}</div>
-                    <div style={styles.statusPill}>{item.status}</div>
-                  </div>
-
-                  <p style={styles.accessDescription}>{item.descricao}</p>
-
-                  <div style={styles.accessFooter}>Abrir área</div>
-                </Link>
-              ))}
-            </div>
-          </article>
-
-          <aside style={styles.sideColumn}>
-            <article style={styles.sideCard}>
-              <div style={styles.sectionHeader}>
-                <div>
-                  <h2 style={styles.sectionTitle}>Modelo de plano</h2>
-                  <p style={styles.sectionSubtitle}>
-                    Estrutura simples para cortesia, teste e acesso ativo sem complicar o app.
-                  </p>
-                </div>
-
-                <div style={styles.sectionTag}>Planos</div>
-              </div>
-
-              <div style={styles.readingStack}>
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Cortesia</strong>
-                  <p style={styles.readingText}>
-                    Ideal para sua loja, mantendo uso livre sem cobrança neste momento.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Teste</strong>
-                  <p style={styles.readingText}>
-                    Permite liberar algumas lojas para teste real antes da fase de cobrança.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Ativo</strong>
-                  <p style={styles.readingText}>
-                    Base pronta para quando você quiser cobrar acesso no futuro.
-                  </p>
-                </div>
-              </div>
+      <section
+        style={{
+          width: "100%",
+          maxWidth: "1180px",
+          margin: "0 auto 22px auto",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "16px",
+          }}
+        >
+          {resumo.map((item) => (
+            <article
+              key={item.rotulo}
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,252,249,0.98) 100%)",
+                border: "1px solid rgba(195,228,208,0.82)",
+                boxShadow: "0 16px 50px rgba(16, 36, 24, 0.06)",
+                borderRadius: "28px",
+                padding: "22px",
+                minWidth: 0,
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.82rem",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "#5b7668",
+                  marginBottom: "10px",
+                  fontWeight: 700,
+                }}
+              >
+                {item.rotulo}
+              </span>
+              <strong
+                style={{
+                  display: "block",
+                  fontSize: "clamp(1.8rem, 4vw, 2.15rem)",
+                  lineHeight: 1,
+                  marginBottom: "12px",
+                  letterSpacing: "-0.04em",
+                  color: "#0f2418",
+                }}
+              >
+                {item.valor}
+              </strong>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#567062",
+                  lineHeight: 1.7,
+                  fontSize: "1rem",
+                }}
+              >
+                {item.descricao}
+              </p>
             </article>
+          ))}
+        </div>
+      </section>
 
-            <article style={styles.sideCard}>
-              <div style={styles.sectionHeader}>
-                <div>
-                  <h2 style={styles.sectionTitle}>Próximo passo</h2>
-                  <p style={styles.sectionSubtitle}>
-                    Agora que o login geral foi preparado, o próximo passo é ligar isso a uma tela
-                    real de autenticação simples da loja.
-                  </p>
-                </div>
+      <section
+        style={{
+          width: "100%",
+          maxWidth: "1180px",
+          margin: "0 auto 22px auto",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(248,252,249,0.98) 100%)",
+          border: "1px solid rgba(195,228,208,0.82)",
+          boxShadow: "0 16px 50px rgba(16, 36, 24, 0.06)",
+          borderRadius: "32px",
+          padding: "22px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "16px",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(1.9rem, 4vw, 2.5rem)",
+                lineHeight: 1,
+                letterSpacing: "-0.05em",
+                color: "#0f2418",
+              }}
+            >
+              Estrutura institucional
+            </h2>
+            <p
+              style={{
+                margin: "12px 0 0 0",
+                color: "#567062",
+                lineHeight: 1.75,
+                fontSize: "1.02rem",
+              }}
+            >
+              Base preparada para acesso protegido, memória institucional e
+              crescimento sólido da plataforma.
+            </p>
+          </div>
 
-                <div style={styles.sectionTag}>Continuar</div>
-              </div>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "999px",
+              padding: "9px 14px",
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              background: "rgba(225,246,233,0.92)",
+              border: "1px solid rgba(190,225,202,0.95)",
+              color: "#2a744b",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Padrão premium
+          </span>
+        </div>
 
-              <div style={styles.quickLinks}>
-                <Link href="/irmaos" style={styles.quickLink}>
-                  Abrir painel
-                </Link>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "18px",
+          }}
+        >
+          {areas.map((area) => (
+            <article
+              key={area.titulo}
+              style={{
+                background:
+                  "linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%)",
+                border: "1px solid rgba(214,236,223,0.95)",
+                borderRadius: "28px",
+                padding: "22px",
+                minWidth: 0,
+              }}
+            >
+              <h3
+                style={{
+                  margin: "0 0 12px 0",
+                  fontSize: "1.45rem",
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.04em",
+                  color: "#0f2418",
+                }}
+              >
+                {area.titulo}
+              </h3>
 
-                <Link href="/irmaos/agenda" style={styles.quickLinkSecondary}>
-                  Abrir agenda
-                </Link>
-              </div>
+              <p
+                style={{
+                  margin: "0 0 18px 0",
+                  color: "#4f685c",
+                  lineHeight: 1.8,
+                  fontSize: "1rem",
+                }}
+              >
+                {area.descricao}
+              </p>
+
+              <a
+                href={area.href}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  padding: "13px 18px",
+                  borderRadius: "16px",
+                  background:
+                    "linear-gradient(180deg, #17643f 0%, #125433 100%)",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  boxShadow: "0 10px 24px rgba(23, 100, 63, 0.16)",
+                  width: "100%",
+                }}
+              >
+                Abrir área
+              </a>
             </article>
-          </aside>
-        </section>
+          ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          width: "100%",
+          maxWidth: "1180px",
+          margin: "0 auto",
+        }}
+      >
+        <div
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,252,249,0.98) 100%)",
+            border: "1px solid rgba(195,228,208,0.82)",
+            boxShadow: "0 16px 50px rgba(16, 36, 24, 0.06)",
+            borderRadius: "30px",
+            padding: "22px",
+            color: "#567062",
+            lineHeight: 1.75,
+            fontSize: "0.98rem",
+          }}
+        >
+          <strong style={{ color: "#174d2b" }}>
+            Sistema em constante atualização.
+          </strong>{" "}
+          Esta plataforma está evoluindo em etapas seguras, preservando a
+          estabilidade do que já foi publicado.
+        </div>
       </section>
     </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    padding: "28px 16px 56px",
-    background:
-      "radial-gradient(circle at top left, rgba(22,163,74,0.16), transparent 24%), radial-gradient(circle at bottom right, rgba(13,148,136,0.12), transparent 24%), linear-gradient(180deg, #f3fbf5 0%, #fbfffc 100%)",
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    color: "#10231a",
-    position: "relative",
-    overflow: "hidden",
-  },
-  glowTop: {
-    position: "absolute",
-    top: -110,
-    left: -110,
-    width: 300,
-    height: 300,
-    borderRadius: "50%",
-    background: "rgba(34,197,94,0.16)",
-    filter: "blur(75px)",
-    pointerEvents: "none",
-  },
-  glowBottom: {
-    position: "absolute",
-    right: -100,
-    bottom: -100,
-    width: 300,
-    height: 300,
-    borderRadius: "50%",
-    background: "rgba(16,185,129,0.12)",
-    filter: "blur(75px)",
-    pointerEvents: "none",
-  },
-  container: {
-    maxWidth: 1360,
-    margin: "0 auto",
-    position: "relative",
-    zIndex: 1,
-  },
-  hero: {
-    background: "rgba(255,255,255,0.84)",
-    backdropFilter: "blur(14px)",
-    border: "1px solid rgba(134,239,172,0.24)",
-    borderRadius: 32,
-    padding: 28,
-    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
-    marginBottom: 22,
-  },
-  heroTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-    marginBottom: 18,
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "9px 14px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    background: "rgba(34,197,94,0.12)",
-    color: "#166534",
-    border: "1px solid rgba(34,197,94,0.18)",
-  },
-  miniBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "9px 14px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 800,
-    background: "rgba(22,163,74,0.08)",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.12)",
-  },
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.35fr 0.9fr",
-    gap: 22,
-  },
-  heroMain: {
-    display: "grid",
-    gap: 16,
-    alignContent: "start",
-  },
-  sidePanel: {
-    display: "flex",
-  },
-  title: {
-    margin: 0,
-    fontSize: "clamp(2.1rem, 4.2vw, 3.3rem)",
-    lineHeight: 1.02,
-    fontWeight: 900,
-    letterSpacing: "-0.04em",
-    color: "#10231a",
-  },
-  description: {
-    margin: 0,
-    fontSize: 16,
-    lineHeight: 1.8,
-    color: "#355244",
-    maxWidth: 860,
-  },
-  actions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  primaryButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    padding: "0 18px",
-    borderRadius: 16,
-    textDecoration: "none",
-    fontWeight: 900,
-    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
-    color: "#ffffff",
-    boxShadow: "0 16px 35px rgba(22,163,74,0.20)",
-  },
-  secondaryButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    padding: "0 18px",
-    borderRadius: 16,
-    textDecoration: "none",
-    fontWeight: 800,
-    background: "#ffffff",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.18)",
-  },
-  notice: {
-    padding: "14px 16px",
-    borderRadius: 18,
-    background: "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(16,185,129,0.08))",
-    border: "1px solid rgba(34,197,94,0.14)",
-    color: "#214034",
-    fontSize: 14,
-    lineHeight: 1.6,
-  },
-  profileCard: {
-    width: "100%",
-    background: "linear-gradient(180deg, #ffffff 0%, #f7fff8 100%)",
-    borderRadius: 28,
-    border: "1px solid rgba(134,239,172,0.26)",
-    boxShadow: "0 22px 50px rgba(6,78,59,0.08)",
-    padding: 22,
-    display: "grid",
-    gap: 14,
-  },
-  profileHeader: {
-    fontSize: 12,
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: 0.45,
-    color: "#15803d",
-  },
-  profileName: {
-    fontSize: 28,
-    lineHeight: 1.06,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  pillRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  pillDark: {
-    display: "inline-flex",
-    padding: "7px 12px",
-    borderRadius: 999,
-    background: "#14532d",
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: 800,
-  },
-  pillLight: {
-    display: "inline-flex",
-    padding: "7px 12px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.08)",
-    color: "#14532d",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(34,197,94,0.12)",
-  },
-  infoGrid: {
-    display: "grid",
-    gap: 12,
-  },
-  infoItem: {
-    display: "grid",
-    gap: 5,
-    padding: "13px 14px",
-    borderRadius: 18,
-    background: "#f7fcf8",
-    border: "1px solid rgba(134,239,172,0.22)",
-  },
-  infoLabel: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.35,
-    color: "#5b7b6b",
-    fontWeight: 800,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#10231a",
-    fontWeight: 800,
-    wordBreak: "break-word",
-  },
-  metricGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 16,
-    marginBottom: 22,
-  },
-  metricCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 24,
-    padding: 20,
-    boxShadow: "0 16px 45px rgba(6,78,59,0.06)",
-    display: "grid",
-    gap: 8,
-  },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: "#4d6b5b",
-  },
-  metricValue: {
-    fontSize: 30,
-    lineHeight: 1,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  metricHint: {
-    fontSize: 13,
-    color: "#5d786a",
-    lineHeight: 1.55,
-  },
-  contentGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
-    gap: 22,
-    alignItems: "start",
-  },
-  mainCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 28,
-    padding: 24,
-    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
-  },
-  sideColumn: {
-    display: "grid",
-    gap: 22,
-  },
-  sideCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 28,
-    padding: 24,
-    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
-  },
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 18,
-  },
-  sectionTitle: {
-    margin: 0,
-    fontSize: 24,
-    lineHeight: 1.08,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  sectionSubtitle: {
-    margin: "8px 0 0",
-    fontSize: 14,
-    lineHeight: 1.6,
-    color: "#5d786a",
-  },
-  sectionTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 36,
-    padding: "0 12px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    border: "1px solid rgba(22,163,74,0.16)",
-    fontSize: 12,
-    fontWeight: 900,
-    whiteSpace: "nowrap",
-  },
-  cardsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 16,
-  },
-  accessCard: {
-    display: "grid",
-    gap: 12,
-    textDecoration: "none",
-    padding: 18,
-    borderRadius: 22,
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
-    border: "1px solid rgba(134,239,172,0.20)",
-    boxShadow: "0 14px 34px rgba(6,78,59,0.05)",
-    color: "inherit",
-  },
-  accessTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  accessTitle: {
-    fontSize: 20,
-    lineHeight: 1.15,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  statusPill: {
-    display: "inline-flex",
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(22,163,74,0.14)",
-    whiteSpace: "nowrap",
-  },
-  accessDescription: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#355244",
-  },
-  accessFooter: {
-    fontSize: 13,
-    fontWeight: 900,
-    color: "#14532d",
-  },
-  readingStack: {
-    display: "grid",
-    gap: 14,
-  },
-  readingItem: {
-    padding: "16px",
-    borderRadius: 18,
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
-    border: "1px solid rgba(134,239,172,0.18)",
-  },
-  readingTitle: {
-    display: "block",
-    marginBottom: 6,
-    fontSize: 15,
-    color: "#10231a",
-    fontWeight: 900,
-  },
-  readingText: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#4f6c5e",
-  },
-  quickLinks: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  quickLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
-    color: "#ffffff",
-    fontWeight: 900,
-    boxShadow: "0 16px 35px rgba(22,163,74,0.18)",
-  },
-  quickLinkSecondary: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "#ffffff",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.18)",
-    fontWeight: 800,
-  },
-};

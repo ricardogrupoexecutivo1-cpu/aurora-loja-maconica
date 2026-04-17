@@ -1,670 +1,533 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
-const ACESSOS = [
-  {
-    titulo: "Família",
-    descricao:
-      "Cadastro familiar protegido com base social, aniversários, observações institucionais e leitura elegante.",
-    href: "/irmaos/familia",
-    status: "Ativo",
-  },
-  {
-    titulo: "Histórico maçônico",
-    descricao:
-      "Área institucional para trajetória do irmão, graus, cargos, comissões, eventos e marcos importantes.",
-    href: "/irmaos/historico",
-    status: "Ativo",
-  },
-  {
-    titulo: "Documentos e downloads",
-    descricao:
-      "Espaço para fichas, comprovantes, atas, declarações, referências e cópias locais protegidas.",
-    href: "/irmaos/documentos",
-    status: "Ativo",
-  },
-  {
-    titulo: "Agenda e lembretes",
-    descricao:
-      "Base para reuniões, solenidades, aniversários, compromissos e datas importantes do irmão.",
-    href: "/irmaos/agenda",
-    status: "Ativo",
-  },
-];
+type LojaPayload = {
+  id: string;
+  slug: string | null;
+  nome_loja: string | null;
+  responsavel_nome: string | null;
+  responsavel_email: string | null;
+  responsavel_whatsapp: string | null;
+  cidade: string | null;
+  estado: string | null;
+  mensagem_institucional: string | null;
+  configuracao_concluida: boolean;
+  status: string | null;
+  plano: string | null;
+  courtesy_expires_at: string | null;
+};
 
-const DESTAQUES = [
-  {
-    label: "Área reservada",
-    valor: "Protegida",
-    apoio: "Acesso institucional com foco em privacidade e organização.",
-  },
-  {
-    label: "Módulos ativos",
-    valor: "4",
-    apoio: "Família, histórico, documentos e agenda já estruturados.",
-  },
-  {
-    label: "Downloads",
-    valor: "Liberados",
-    apoio: "Seguimos sua regra de ouro de permitir cópia local.",
-  },
-  {
-    label: "Expansão",
-    valor: "Pronta",
-    apoio: "Base preparada para novos módulos sem quebrar o que já funciona.",
-  },
-];
+type ApiResponse = {
+  success: boolean;
+  message?: string;
+  loja?: LojaPayload | null;
+};
 
-export default function IrmaosPage() {
+type ReferenciaLocal = {
+  lojaId: string | null;
+  lojaSlug: string | null;
+  lojaNome: string | null;
+};
+
+const STORAGE_KEYS = {
+  lojaId: "aurora_loja_id",
+  lojaSlug: "aurora_loja_slug",
+  lojaNome: "aurora_loja_nome",
+  lojaEmail: "aurora_loja_responsavel_email",
+};
+
+const LOJA_ID_FIXA = "36dbb2e4-d499-44d3-b3e1-313c0f41993e";
+
+function lerReferenciaLocal(): ReferenciaLocal {
+  if (typeof window === "undefined") {
+    return {
+      lojaId: null,
+      lojaSlug: null,
+      lojaNome: null,
+    };
+  }
+
+  return {
+    lojaId: window.localStorage.getItem(STORAGE_KEYS.lojaId),
+    lojaSlug: window.localStorage.getItem(STORAGE_KEYS.lojaSlug),
+    lojaNome: window.localStorage.getItem(STORAGE_KEYS.lojaNome),
+  };
+}
+
+function salvarReferenciaLocal(loja: LojaPayload) {
+  if (typeof window === "undefined") return;
+
+  if (loja.id) {
+    window.localStorage.setItem(STORAGE_KEYS.lojaId, loja.id);
+  }
+
+  if (loja.slug) {
+    window.localStorage.setItem(STORAGE_KEYS.lojaSlug, loja.slug);
+  }
+
+  if (loja.nome_loja) {
+    window.localStorage.setItem(STORAGE_KEYS.lojaNome, loja.nome_loja);
+  }
+
+  if (loja.responsavel_email) {
+    window.localStorage.setItem(
+      STORAGE_KEYS.lojaEmail,
+      loja.responsavel_email,
+    );
+  }
+}
+
+function formatarPlano(plano: string | null | undefined) {
+  if (!plano) return "Não definido";
+  return plano.charAt(0).toUpperCase() + plano.slice(1).toLowerCase();
+}
+
+function formatarStatus(status: string | null | undefined) {
+  if (!status) return "Em atualização";
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
+function formatarValidade(data: string | null | undefined) {
+  if (!data) return "Sem validade definida";
+
+  const parsed = new Date(data);
+  if (Number.isNaN(parsed.getTime())) return "Sem validade definida";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "long",
+  }).format(parsed);
+}
+
+function montarUrlBuscaLoja() {
+  if (typeof window === "undefined") {
+    return `/api/lojas/configurar?id=${LOJA_ID_FIXA}`;
+  }
+
+  const lojaId =
+    window.localStorage.getItem(STORAGE_KEYS.lojaId) || LOJA_ID_FIXA;
+
+  return `/api/lojas/configurar?id=${encodeURIComponent(lojaId)}`;
+}
+
+function CardResumo({
+  titulo,
+  valor,
+  descricao,
+}: {
+  titulo: string;
+  valor: string;
+  descricao: string;
+}) {
   return (
-    <main style={styles.page}>
-      <div style={styles.glowTop} />
-      <div style={styles.glowBottom} />
+    <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+        {titulo}
+      </p>
+      <h3 className="mt-3 text-lg font-bold text-slate-900">{valor}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{descricao}</p>
+    </div>
+  );
+}
 
-      <section style={styles.container}>
-        <header style={styles.hero}>
-          <div style={styles.heroTop}>
-            <div style={styles.badge}>Cadastro do irmão e base institucional protegida</div>
-            <div style={styles.miniBadge}>Aurora Loja Maçônica</div>
-          </div>
+function CardArea({
+  rotulo,
+  titulo,
+  descricao,
+  href,
+  cta,
+}: {
+  rotulo: string;
+  titulo: string;
+  descricao: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <article className="rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+        {rotulo}
+      </p>
+      <h3 className="mt-2 text-xl font-bold text-slate-900">{titulo}</h3>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{descricao}</p>
+      <div className="mt-5">
+        <Link
+          href={href}
+          className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+        >
+          {cta}
+        </Link>
+      </div>
+    </article>
+  );
+}
 
-          <div style={styles.heroGrid}>
-            <div style={styles.heroMain}>
-              <h1 style={styles.title}>Irmãos • Aurora Loja Maçônica</h1>
+export default function IrmaosHomePage() {
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [loja, setLoja] = useState<LojaPayload | null>(null);
+  const [referenciaLocal, setReferenciaLocal] = useState<ReferenciaLocal>({
+    lojaId: null,
+    lojaSlug: null,
+    lojaNome: null,
+  });
 
-              <p style={styles.description}>
-                Painel institucional criado para organizar o cadastro do irmão, estrutura familiar,
-                histórico maçônico, documentação, downloads, agenda e futuras expansões com
-                segurança, elegância visual e proteção dos dados da Loja.
-              </p>
+  useEffect(() => {
+    let ativo = true;
 
-              <div style={styles.actions}>
-                <Link href="/" style={styles.primaryButton}>
-                  Voltar à home
-                </Link>
+    async function carregar() {
+      try {
+        setCarregando(true);
+        setErro(null);
 
-                <Link href="/irmaos/familia" style={styles.secondaryButton}>
-                  Ir para família
-                </Link>
+        const referenciaInicial = lerReferenciaLocal();
+        if (ativo) {
+          setReferenciaLocal(referenciaInicial);
+        }
+
+        const response = await fetch(montarUrlBuscaLoja(), {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Falha ao carregar a loja. Status: ${response.status}`);
+        }
+
+        const data = (await response.json()) as ApiResponse;
+
+        if (!ativo) return;
+
+        if (data.success && data.loja?.id) {
+          setLoja(data.loja);
+          salvarReferenciaLocal(data.loja);
+          setReferenciaLocal({
+            lojaId: data.loja.id ?? null,
+            lojaSlug: data.loja.slug ?? null,
+            lojaNome: data.loja.nome_loja ?? null,
+          });
+          return;
+        }
+
+        setLoja(null);
+      } catch (error) {
+        if (!ativo) return;
+
+        const mensagem =
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar os dados da loja.";
+
+        setErro(mensagem);
+      } finally {
+        if (ativo) {
+          setCarregando(false);
+        }
+      }
+    }
+
+    carregar();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const baseVinculada = useMemo(() => {
+    return Boolean(loja?.id || referenciaLocal.lojaId);
+  }, [loja?.id, referenciaLocal.lojaId]);
+
+  const nomeExibicao = useMemo(() => {
+    return loja?.nome_loja || referenciaLocal.lojaNome || "Loja Maçônica Aurora";
+  }, [loja?.nome_loja, referenciaLocal.lojaNome]);
+
+  const planoExibicao = useMemo(() => {
+    return formatarPlano(loja?.plano);
+  }, [loja?.plano]);
+
+  const statusExibicao = useMemo(() => {
+    return formatarStatus(loja?.status);
+  }, [loja?.status]);
+
+  const localizacaoExibicao = useMemo(() => {
+    const cidade = loja?.cidade?.trim();
+    const estado = loja?.estado?.trim();
+
+    if (cidade && estado) return `${cidade} • ${estado}`;
+    if (cidade) return cidade;
+    if (estado) return estado;
+
+    return "Uso interno com acesso controlado";
+  }, [loja?.cidade, loja?.estado]);
+
+  const validadeExibicao = useMemo(() => {
+    if (loja?.courtesy_expires_at) {
+      return `Cortesia válida até ${formatarValidade(loja.courtesy_expires_at)}`;
+    }
+
+    if ((loja?.plano || "").toLowerCase() === "premium") {
+      return "Plano premium ativo no Supabase";
+    }
+
+    if ((loja?.status || "").toLowerCase() === "ativa") {
+      return "Base ativa e pronta para evolução";
+    }
+
+    return "Status em atualização";
+  }, [loja?.courtesy_expires_at, loja?.plano, loja?.status]);
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.10),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#ffffff,_#f0fdf4)] text-slate-900">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[2rem] border border-emerald-100/80 bg-white shadow-[0_24px_70px_-34px_rgba(22,163,74,0.22)]">
+          <div className="border-b border-emerald-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 px-6 py-7 text-white">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-4xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
+                  Aurora Loja Maçônica
+                </p>
+                <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Área interna da loja
+                </h1>
+                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 sm:text-base">
+                  Sistema restrito da loja com acesso controlado, leitura
+                  protegida, organização institucional e evolução segura em
+                  padrão verde premium.
+                </p>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-emerald-100">
+                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                    {nomeExibicao}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">
+                    {localizacaoExibicao}
+                  </span>
+                  <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5">
+                    {planoExibicao}
+                  </span>
+                </div>
               </div>
 
-              <div style={styles.notice}>
-                <strong>Sistema em constante atualização.</strong> Esta área pode passar por
-                melhorias visuais, operacionais e institucionais durante a evolução do projeto.
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Link
+                  href="/"
+                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/planos"
+                  className="rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-center text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/25"
+                >
+                  Planos
+                </Link>
+                <Link
+                  href="/configurar-loja"
+                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  Configurar loja
+                </Link>
+                <Link
+                  href="/downloads"
+                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  Downloads
+                </Link>
               </div>
             </div>
-
-            <aside style={styles.sidePanel}>
-              <div style={styles.profileCard}>
-                <div style={styles.profileHeader}>Registro institucional</div>
-
-                <div style={styles.profileName}>Ricardo Justino Silva</div>
-
-                <div style={styles.pillRow}>
-                  <span style={styles.pillDark}>Completo</span>
-                  <span style={styles.pillLight}>Irmão</span>
-                  <span style={styles.pillLight}>Protegido</span>
-                </div>
-
-                <div style={styles.infoGrid}>
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>UUID real</span>
-                    <strong style={styles.infoValue}>
-                      be8ae6de-f312-402f-834b-6739c033217e
-                    </strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Cargo</span>
-                    <strong style={styles.infoValue}>Irmão da Loja</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>E-mail</span>
-                    <strong style={styles.infoValue}>ricardogrupoexecutivo1@gmail.com</strong>
-                  </div>
-
-                  <div style={styles.infoItem}>
-                    <span style={styles.infoLabel}>Situação</span>
-                    <strong style={styles.infoValue}>Painel central ativo e consolidado</strong>
-                  </div>
-                </div>
-              </div>
-            </aside>
           </div>
-        </header>
 
-        <section style={styles.metricGrid}>
-          {DESTAQUES.map((item) => (
-            <article key={item.label} style={styles.metricCard}>
-              <span style={styles.metricLabel}>{item.label}</span>
-              <strong style={styles.metricValue}>{item.valor}</strong>
-              <span style={styles.metricHint}>{item.apoio}</span>
-            </article>
-          ))}
-        </section>
+          <div className="bg-gradient-to-b from-white to-slate-50/70 px-6 py-6">
+            <div className="grid gap-4 lg:grid-cols-4">
+              <CardResumo
+                titulo="Loja vinculada"
+                valor={nomeExibicao}
+                descricao={
+                  baseVinculada
+                    ? "Base institucional vinculada com sucesso."
+                    : "Aguardando vinculação da base institucional."
+                }
+              />
 
-        <section style={styles.contentGrid}>
-          <article style={styles.mainCard}>
-            <div style={styles.sectionHeader}>
-              <div>
-                <h2 style={styles.sectionTitle}>Acessos principais</h2>
-                <p style={styles.sectionSubtitle}>
-                  Entrada rápida para as áreas institucionais já prontas do cadastro do irmão.
+              <CardResumo
+                titulo="Plano atual"
+                valor={planoExibicao}
+                descricao="Leitura refletida com base real do Supabase."
+              />
+
+              <CardResumo
+                titulo="Status da loja"
+                valor={statusExibicao}
+                descricao={
+                  loja?.configuracao_concluida
+                    ? "Configuração concluída e ambiente pronto para uso."
+                    : "Complete a configuração para consolidar a base."
+                }
+              />
+
+              <CardResumo
+                titulo="Validade / cortesia"
+                valor="Base ativa"
+                descricao={validadeExibicao}
+              />
+            </div>
+          </div>
+        </div>
+
+        {carregando ? (
+          <div className="rounded-[1.75rem] border border-emerald-100 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+            Carregando leitura real da loja no Supabase...
+          </div>
+        ) : null}
+
+        {erro ? (
+          <div className="rounded-[1.75rem] border border-rose-100 bg-rose-50 px-5 py-4 text-sm text-rose-800 shadow-sm">
+            <strong>Falha de leitura:</strong> {erro}
+          </div>
+        ) : null}
+
+        {!carregando && !erro && baseVinculada ? (
+          <div className="rounded-[1.75rem] border border-emerald-100 bg-white shadow-sm">
+            <div className="border-b border-emerald-50 bg-gradient-to-r from-emerald-50 to-white px-5 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                Leitura geral da loja
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-slate-900">
+                {nomeExibicao}
+              </h2>
+            </div>
+
+            <div className="grid gap-4 px-5 py-5 md:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
+                  Plano
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {planoExibicao}
                 </p>
               </div>
 
-              <div style={styles.sectionTag}>Painel central</div>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
+                  Status
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {statusExibicao}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
+                  Acesso
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  Liberado
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.20em] text-slate-500">
+                  Perfil
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  Uso interno protegido
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {!carregando && !erro && !baseVinculada ? (
+          <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+            <strong>Base local não vinculada:</strong> nenhuma referência da loja
+            foi encontrada no navegador e a API não retornou uma loja válida.
+            Complete a configuração inicial para vincular a base.
+          </div>
+        ) : null}
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <CardArea
+            rotulo="Configuração institucional"
+            titulo="Completar configuração"
+            descricao="Complete os dados institucionais da loja para evoluir a base com segurança, manter a identidade protegida e preparar os próximos módulos com leitura premium."
+            href="/configurar-loja"
+            cta="Completar configuração"
+          />
+
+          <CardArea
+            rotulo="Família e histórico"
+            titulo="Cadastre familiares e preserve a memória institucional"
+            descricao="Cadastre familiares, preserve memória institucional e mantenha a base organizada com leitura elegante no celular e no computador."
+            href="/irmaos/familia"
+            cta="Ir para família"
+          />
+
+          <CardArea
+            rotulo="Documentos protegidos"
+            titulo="Arquivos internos e materiais reservados"
+            descricao="Acesse arquivos internos, downloads, registros e materiais reservados com acesso controlado e leitura institucional premium."
+            href="/downloads"
+            cta="Abrir área"
+          />
+
+          <CardArea
+            rotulo="Agenda institucional"
+            titulo="Reuniões, solenidades e compromissos"
+            descricao="Organize reuniões, solenidades, aniversários e compromissos com leitura clara no celular e no computador."
+            href="/agenda"
+            cta="Abrir área"
+          />
+        </div>
+
+        <div className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+                Organização da loja
+              </p>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">
+                Configurar minha loja
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Complete os dados institucionais da loja para evoluir a base com
+                segurança, padrão premium e estrutura pronta para irmãos
+                autorizados.
+              </p>
             </div>
 
-            <div style={styles.cardsGrid}>
-              {ACESSOS.map((item) => (
-                <Link key={item.titulo} href={item.href} style={styles.accessCard}>
-                  <div style={styles.accessTop}>
-                    <div style={styles.accessTitle}>{item.titulo}</div>
-                    <div style={styles.statusPill}>{item.status}</div>
-                  </div>
-
-                  <p style={styles.accessDescription}>{item.descricao}</p>
-
-                  <div style={styles.accessFooter}>Abrir área</div>
-                </Link>
-              ))}
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/configurar-loja"
+                className="inline-flex rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                Abrir área
+              </Link>
+              <Link
+                href="/cargos"
+                className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+              >
+                Cargos
+              </Link>
+              <Link
+                href="/financeiro"
+                className="inline-flex rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50"
+              >
+                Financeiro
+              </Link>
             </div>
-          </article>
+          </div>
+        </div>
 
-          <aside style={styles.sideColumn}>
-            <article style={styles.sideCard}>
-              <div style={styles.sectionHeader}>
-                <div>
-                  <h2 style={styles.sectionTitle}>Direção institucional</h2>
-                  <p style={styles.sectionSubtitle}>
-                    A base foi organizada para crescimento seguro, sem perder o padrão bonito.
-                  </p>
-                </div>
-
-                <div style={styles.sectionTag}>Estratégia</div>
-              </div>
-
-              <div style={styles.readingStack}>
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Privacidade por padrão</strong>
-                  <p style={styles.readingText}>
-                    Os dados do irmão e das áreas relacionadas permanecem em ambiente reservado, com
-                    foco em organização, proteção e governança institucional.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Visual verde premium</strong>
-                  <p style={styles.readingText}>
-                    Mantivemos a identidade clara premium em verde para toda a trilha dos irmãos,
-                    incluindo família, histórico, documentos e agenda.
-                  </p>
-                </div>
-
-                <div style={styles.readingItem}>
-                  <strong style={styles.readingTitle}>Evolução segura</strong>
-                  <p style={styles.readingText}>
-                    O caminho agora é continuar com mudanças pequenas, uma por vez, sem quebrar o
-                    que já está funcionando.
-                  </p>
-                </div>
-              </div>
-            </article>
-
-            <article style={styles.sideCard}>
-              <div style={styles.sectionHeader}>
-                <div>
-                  <h2 style={styles.sectionTitle}>Atalhos rápidos</h2>
-                  <p style={styles.sectionSubtitle}>
-                    Navegação curta para manter o uso simples no PC e no celular.
-                  </p>
-                </div>
-
-                <div style={styles.sectionTag}>Rápido</div>
-              </div>
-
-              <div style={styles.quickLinks}>
-                <Link href="/irmaos/familia" style={styles.quickLink}>
-                  Abrir Família
-                </Link>
-
-                <Link href="/irmaos/historico" style={styles.quickLink}>
-                  Abrir Histórico
-                </Link>
-
-                <Link href="/irmaos/documentos" style={styles.quickLinkSecondary}>
-                  Abrir Documentos
-                </Link>
-
-                <Link href="/irmaos/agenda" style={styles.quickLinkSecondary}>
-                  Abrir Agenda
-                </Link>
-              </div>
-            </article>
-          </aside>
-        </section>
+        <footer className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
+          Sistema em constante atualização. O painel agora pode refletir o plano
+          e a validade reais da loja a partir do Supabase, mantendo a evolução
+          institucional com estabilidade e leitura premium.
+        </footer>
       </section>
     </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    padding: "28px 16px 56px",
-    background:
-      "radial-gradient(circle at top left, rgba(22,163,74,0.16), transparent 24%), radial-gradient(circle at bottom right, rgba(13,148,136,0.12), transparent 24%), linear-gradient(180deg, #f3fbf5 0%, #fbfffc 100%)",
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    color: "#10231a",
-    position: "relative",
-    overflow: "hidden",
-  },
-  glowTop: {
-    position: "absolute",
-    top: -110,
-    left: -110,
-    width: 300,
-    height: 300,
-    borderRadius: "50%",
-    background: "rgba(34,197,94,0.16)",
-    filter: "blur(75px)",
-    pointerEvents: "none",
-  },
-  glowBottom: {
-    position: "absolute",
-    right: -100,
-    bottom: -100,
-    width: 300,
-    height: 300,
-    borderRadius: "50%",
-    background: "rgba(16,185,129,0.12)",
-    filter: "blur(75px)",
-    pointerEvents: "none",
-  },
-  container: {
-    maxWidth: 1360,
-    margin: "0 auto",
-    position: "relative",
-    zIndex: 1,
-  },
-  hero: {
-    background: "rgba(255,255,255,0.84)",
-    backdropFilter: "blur(14px)",
-    border: "1px solid rgba(134,239,172,0.24)",
-    borderRadius: 32,
-    padding: 28,
-    boxShadow: "0 24px 70px rgba(6,78,59,0.08)",
-    marginBottom: 22,
-  },
-  heroTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-    marginBottom: 18,
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "9px 14px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 900,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    background: "rgba(34,197,94,0.12)",
-    color: "#166534",
-    border: "1px solid rgba(34,197,94,0.18)",
-  },
-  miniBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "9px 14px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 800,
-    background: "rgba(22,163,74,0.08)",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.12)",
-  },
-  heroGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.35fr 0.9fr",
-    gap: 22,
-  },
-  heroMain: {
-    display: "grid",
-    gap: 16,
-    alignContent: "start",
-  },
-  sidePanel: {
-    display: "flex",
-  },
-  title: {
-    margin: 0,
-    fontSize: "clamp(2.1rem, 4.2vw, 3.3rem)",
-    lineHeight: 1.02,
-    fontWeight: 900,
-    letterSpacing: "-0.04em",
-    color: "#10231a",
-  },
-  description: {
-    margin: 0,
-    fontSize: 16,
-    lineHeight: 1.8,
-    color: "#355244",
-    maxWidth: 860,
-  },
-  actions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  primaryButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    padding: "0 18px",
-    borderRadius: 16,
-    textDecoration: "none",
-    fontWeight: 900,
-    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
-    color: "#ffffff",
-    boxShadow: "0 16px 35px rgba(22,163,74,0.20)",
-  },
-  secondaryButton: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 48,
-    padding: "0 18px",
-    borderRadius: 16,
-    textDecoration: "none",
-    fontWeight: 800,
-    background: "#ffffff",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.18)",
-  },
-  notice: {
-    padding: "14px 16px",
-    borderRadius: 18,
-    background: "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(16,185,129,0.08))",
-    border: "1px solid rgba(34,197,94,0.14)",
-    color: "#214034",
-    fontSize: 14,
-    lineHeight: 1.6,
-  },
-  profileCard: {
-    width: "100%",
-    background: "linear-gradient(180deg, #ffffff 0%, #f7fff8 100%)",
-    borderRadius: 28,
-    border: "1px solid rgba(134,239,172,0.26)",
-    boxShadow: "0 22px 50px rgba(6,78,59,0.08)",
-    padding: 22,
-    display: "grid",
-    gap: 14,
-  },
-  profileHeader: {
-    fontSize: 12,
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: 0.45,
-    color: "#15803d",
-  },
-  profileName: {
-    fontSize: 28,
-    lineHeight: 1.06,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  pillRow: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  pillDark: {
-    display: "inline-flex",
-    padding: "7px 12px",
-    borderRadius: 999,
-    background: "#14532d",
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: 800,
-  },
-  pillLight: {
-    display: "inline-flex",
-    padding: "7px 12px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.08)",
-    color: "#14532d",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(34,197,94,0.12)",
-  },
-  infoGrid: {
-    display: "grid",
-    gap: 12,
-  },
-  infoItem: {
-    display: "grid",
-    gap: 5,
-    padding: "13px 14px",
-    borderRadius: 18,
-    background: "#f7fcf8",
-    border: "1px solid rgba(134,239,172,0.22)",
-  },
-  infoLabel: {
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 0.35,
-    color: "#5b7b6b",
-    fontWeight: 800,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#10231a",
-    fontWeight: 800,
-    wordBreak: "break-word",
-  },
-  metricGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: 16,
-    marginBottom: 22,
-  },
-  metricCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 24,
-    padding: 20,
-    boxShadow: "0 16px 45px rgba(6,78,59,0.06)",
-    display: "grid",
-    gap: 8,
-  },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: 900,
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    color: "#4d6b5b",
-  },
-  metricValue: {
-    fontSize: 30,
-    lineHeight: 1,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  metricHint: {
-    fontSize: 13,
-    color: "#5d786a",
-    lineHeight: 1.55,
-  },
-  contentGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
-    gap: 22,
-    alignItems: "start",
-  },
-  mainCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 28,
-    padding: 24,
-    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
-  },
-  sideColumn: {
-    display: "grid",
-    gap: 22,
-  },
-  sideCard: {
-    background: "rgba(255,255,255,0.88)",
-    border: "1px solid rgba(134,239,172,0.22)",
-    borderRadius: 28,
-    padding: 24,
-    boxShadow: "0 22px 55px rgba(6,78,59,0.07)",
-  },
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 18,
-  },
-  sectionTitle: {
-    margin: 0,
-    fontSize: 24,
-    lineHeight: 1.08,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  sectionSubtitle: {
-    margin: "8px 0 0",
-    fontSize: 14,
-    lineHeight: 1.6,
-    color: "#5d786a",
-  },
-  sectionTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 36,
-    padding: "0 12px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    border: "1px solid rgba(22,163,74,0.16)",
-    fontSize: 12,
-    fontWeight: 900,
-    whiteSpace: "nowrap",
-  },
-  cardsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 16,
-  },
-  accessCard: {
-    display: "grid",
-    gap: 12,
-    textDecoration: "none",
-    padding: 18,
-    borderRadius: 22,
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
-    border: "1px solid rgba(134,239,172,0.20)",
-    boxShadow: "0 14px 34px rgba(6,78,59,0.05)",
-    color: "inherit",
-  },
-  accessTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
-  },
-  accessTitle: {
-    fontSize: 20,
-    lineHeight: 1.15,
-    fontWeight: 900,
-    color: "#10231a",
-  },
-  statusPill: {
-    display: "inline-flex",
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "rgba(22,163,74,0.10)",
-    color: "#166534",
-    fontSize: 12,
-    fontWeight: 800,
-    border: "1px solid rgba(22,163,74,0.14)",
-    whiteSpace: "nowrap",
-  },
-  accessDescription: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#355244",
-  },
-  accessFooter: {
-    fontSize: 13,
-    fontWeight: 900,
-    color: "#14532d",
-  },
-  readingStack: {
-    display: "grid",
-    gap: 14,
-  },
-  readingItem: {
-    padding: "16px",
-    borderRadius: 18,
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fff9 100%)",
-    border: "1px solid rgba(134,239,172,0.18)",
-  },
-  readingTitle: {
-    display: "block",
-    marginBottom: 6,
-    fontSize: 15,
-    color: "#10231a",
-    fontWeight: 900,
-  },
-  readingText: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#4f6c5e",
-  },
-  quickLinks: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  quickLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "linear-gradient(135deg, #14532d 0%, #16a34a 100%)",
-    color: "#ffffff",
-    fontWeight: 900,
-    boxShadow: "0 16px 35px rgba(22,163,74,0.18)",
-  },
-  quickLinkSecondary: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 46,
-    padding: "0 16px",
-    borderRadius: 16,
-    textDecoration: "none",
-    background: "#ffffff",
-    color: "#14532d",
-    border: "1px solid rgba(34,197,94,0.18)",
-    fontWeight: 800,
-  },
-};

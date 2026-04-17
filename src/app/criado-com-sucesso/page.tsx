@@ -6,194 +6,168 @@ import { useSearchParams } from "next/navigation";
 function CriadoComSucessoConteudo() {
   const searchParams = useSearchParams();
 
-  const corTexto = "#16311f";
-  const corTextoSuave = "#4d6655";
-  const corVerde = "#1f6b3b";
-  const corVerdeEscuro = "#174d2b";
-  const corBorda = "#d7e6d1";
-  const corCard = "#ffffff";
-  const sombra = "0 18px 45px rgba(23, 77, 43, 0.10)";
-
   const id = searchParams.get("id")?.trim() || "";
   const slug = searchParams.get("slug")?.trim() || "";
 
-  const parametros = new URLSearchParams();
-  if (id) parametros.set("id", id);
-  if (slug) parametros.set("slug", slug);
+  const dataHoje = new Date();
+  const dataFinal = new Date();
+  dataFinal.setDate(dataHoje.getDate() + 90);
 
-  const hrefConfigurar = parametros.toString()
-    ? `/configurar-loja?${parametros.toString()}`
+  const formatarData = (d: Date) =>
+    d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+  const validade = formatarData(dataFinal);
+
+  const params = new URLSearchParams();
+  if (id) params.set("id", id);
+  if (slug) params.set("slug", slug);
+
+  const hrefConfigurar = params.toString()
+    ? `/configurar-loja?${params.toString()}`
     : "/configurar-loja";
 
   return (
     <main
       style={{
         minHeight: "100vh",
+        padding: "24px 12px",
         background:
-          "linear-gradient(180deg, #f8fbf7 0%, #eef6eb 45%, #f4f8f2 100%)",
-        padding: "28px 16px 40px",
+          "radial-gradient(circle at top left, rgba(217,243,226,0.85), transparent 28%), radial-gradient(circle at bottom right, rgba(210,238,219,0.72), transparent 24%), linear-gradient(180deg, #f8fcf9 0%, #f1f8f4 52%, #edf6f1 100%)",
+        color: "#102418",
         fontFamily: "Arial, sans-serif",
-        color: corTexto,
       }}
     >
-      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        {/* HERO */}
         <section
           style={{
             background:
               "linear-gradient(135deg, #174d2b 0%, #1f6b3b 60%, #2c8a4b 100%)",
             color: "#ffffff",
-            borderRadius: 28,
-            padding: "34px 24px",
-            boxShadow: "0 22px 50px rgba(23, 77, 43, 0.22)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            marginBottom: 22,
+            borderRadius: 30,
+            padding: "30px 22px",
+            boxShadow: "0 22px 60px rgba(23,77,43,0.25)",
+            marginBottom: 20,
           }}
         >
-          <div
+          <span
             style={{
               display: "inline-block",
-              background: "rgba(255,255,255,0.14)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              color: "#f5ead7",
               padding: "8px 14px",
               borderRadius: 999,
-              fontSize: 12,
+              background: "rgba(255,255,255,0.15)",
               fontWeight: 700,
-              letterSpacing: 0.3,
-              marginBottom: 16,
+              fontSize: 12,
+              marginBottom: 14,
             }}
           >
-            Cadastro inicial confirmado
-          </div>
+            Cortesia liberada
+          </span>
 
           <h1
             style={{
-              margin: "0 0 12px",
-              fontSize: "clamp(28px, 4vw, 42px)",
-              lineHeight: 1.1,
-              fontWeight: 800,
+              margin: 0,
+              fontSize: "clamp(28px, 5vw, 42px)",
+              lineHeight: 1.05,
+              fontWeight: 900,
             }}
           >
-            Sua loja foi criada com sucesso
+            Sua loja já está ativa
           </h1>
 
           <p
             style={{
-              margin: 0,
-              fontSize: "clamp(15px, 2vw, 18px)",
+              marginTop: 12,
               lineHeight: 1.7,
-              color: "rgba(255,255,255,0.92)",
-              maxWidth: 760,
+              fontSize: "1rem",
+              maxWidth: 720,
             }}
           >
-            O pagamento foi identificado e a estrutura inicial da loja já foi
-            preparada com segurança. Agora falta apenas completar os dados
-            institucionais para liberar a configuração completa.
+            A entrada foi realizada com sucesso e a loja já está com acesso
+            liberado automaticamente, pronta para configuração e uso
+            institucional.
           </p>
         </section>
 
-        {(id || slug) && (
-          <section
-            style={{
-              background: "#edf5ea",
-              border: `1px solid ${corBorda}`,
-              borderRadius: 18,
-              padding: "16px 18px",
-              color: corTextoSuave,
-              lineHeight: 1.7,
-              fontSize: 14,
-              marginBottom: 20,
-            }}
-          >
-            <strong style={{ color: corVerdeEscuro }}>Referência da loja:</strong>{" "}
-            {id ? `ID ${id}` : ""}
-            {id && slug ? " • " : ""}
-            {slug ? `Slug ${slug}` : ""}
-          </section>
-        )}
-
+        {/* STATUS PREMIUM */}
         <section
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 14,
-            marginBottom: 24,
+            background: "#ffffff",
+            borderRadius: 26,
+            padding: 22,
+            border: "1px solid #d7e6d1",
+            boxShadow: "0 16px 50px rgba(16,36,24,0.06)",
+            marginBottom: 20,
           }}
         >
-          {[
-            "Loja criada automaticamente",
-            "Responsável inicial vinculado",
-            "Plano salvo com segurança",
-            "Pronta para configuração",
-          ].map((item) => (
-            <div
-              key={item}
-              style={{
-                background: "#edf5ea",
-                border: `1px solid ${corBorda}`,
-                color: corTextoSuave,
-                borderRadius: 18,
-                padding: "14px 16px",
-                fontSize: 14,
-                fontWeight: 700,
-                boxShadow: "0 8px 20px rgba(23, 77, 43, 0.05)",
-              }}
-            >
-              {item}
-            </div>
-          ))}
-        </section>
-
-        <section
-          style={{
-            background: corCard,
-            borderRadius: 24,
-            padding: 24,
-            border: `1px solid ${corBorda}`,
-            boxShadow: sombra,
-            marginBottom: 22,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 14px",
-              fontSize: 26,
-              color: corVerdeEscuro,
-            }}
-          >
-            Próximo passo
-          </h2>
-
-          <p
-            style={{
-              margin: "0 0 18px",
-              color: corTextoSuave,
-              lineHeight: 1.8,
-              fontSize: 15,
-            }}
-          >
-            Complete os dados da sua loja para liberar a estrutura institucional,
-            organizar a área dos irmãos e preparar o ambiente com o padrão
-            oficial da Aurora Loja Maçônica.
-          </p>
+          <h2 style={{ marginBottom: 16 }}>Status da sua entrada</h2>
 
           <div
             style={{
-              display: "flex",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               gap: 12,
-              flexWrap: "wrap",
             }}
           >
+            {[
+              { label: "Plano", value: "Cortesia" },
+              { label: "Status", value: "Ativa" },
+              { label: "Liberação", value: "Automática" },
+              { label: "Validade", value: validade },
+            ].map((item) => (
+              <div
+                key={item.label}
+                style={{
+                  background: "#f7fbf8",
+                  border: "1px solid #d7e6d1",
+                  borderRadius: 18,
+                  padding: 16,
+                }}
+              >
+                <span style={{ fontSize: 12, color: "#567062" }}>
+                  {item.label}
+                </span>
+                <strong style={{ display: "block", marginTop: 6 }}>
+                  {item.value}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section
+          style={{
+            background: "#ffffff",
+            borderRadius: 26,
+            padding: 22,
+            border: "1px solid #d7e6d1",
+            boxShadow: "0 16px 50px rgba(16,36,24,0.06)",
+            marginBottom: 20,
+          }}
+        >
+          <h2>Próximo passo</h2>
+
+          <p style={{ color: "#4d6655", lineHeight: 1.8 }}>
+            Complete os dados institucionais para liberar totalmente a estrutura
+            da loja e começar a utilizar o ambiente com padrão premium.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <a
               href={hrefConfigurar}
               style={{
-                textDecoration: "none",
-                background: `linear-gradient(135deg, ${corVerdeEscuro} 0%, ${corVerde} 100%)`,
-                color: "#ffffff",
+                background:
+                  "linear-gradient(135deg, #174d2b 0%, #1f6b3b 100%)",
+                color: "#fff",
                 padding: "14px 18px",
                 borderRadius: 16,
                 fontWeight: 800,
-                boxShadow: "0 14px 30px rgba(31, 107, 59, 0.20)",
+                textDecoration: "none",
               }}
             >
               Configurar minha loja
@@ -202,99 +176,33 @@ function CriadoComSucessoConteudo() {
             <a
               href="/"
               style={{
-                textDecoration: "none",
-                background: "#ffffff",
-                color: corVerdeEscuro,
+                background: "#fff",
+                border: "1px solid #d7e6d1",
+                color: "#174d2b",
                 padding: "14px 18px",
                 borderRadius: 16,
                 fontWeight: 800,
-                border: `1px solid ${corBorda}`,
+                textDecoration: "none",
               }}
             >
-              Já sou cliente
+              Ir para home
             </a>
           </div>
         </section>
 
-        <section
-          style={{
-            background: corCard,
-            borderRadius: 24,
-            padding: 24,
-            border: `1px solid ${corBorda}`,
-            boxShadow: sombra,
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 12px",
-              fontSize: 22,
-              color: corVerdeEscuro,
-            }}
-          >
-            Segurança institucional
-          </h3>
-
-          <p
-            style={{
-              margin: 0,
-              color: corTextoSuave,
-              lineHeight: 1.8,
-              fontSize: 15,
-            }}
-          >
-            A criação automática da loja preserva a base inicial com segurança.
-            Dados públicos só devem ser liberados após a configuração e a
-            confirmação institucional da loja.
-          </p>
-        </section>
-
+        {/* AVISO */}
         <div
           style={{
-            marginTop: 22,
             background: "#edf5ea",
-            border: `1px solid ${corBorda}`,
             borderRadius: 18,
-            padding: "16px 18px",
-            color: corTextoSuave,
-            lineHeight: 1.7,
+            padding: 16,
             fontSize: 14,
+            color: "#567062",
           }}
         >
-          Sistema em constante atualização. Novas funcionalidades podem ser
-          adicionadas sem comprometer a base existente.
+          Sistema em constante atualização. Sua loja já está dentro da Aurora e
+          pronta para evoluir com segurança.
         </div>
-      </div>
-    </main>
-  );
-}
-
-function CriadoComSucessoFallback() {
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(180deg, #f8fbf7 0%, #eef6eb 45%, #f4f8f2 100%)",
-        padding: "28px 16px 40px",
-        fontFamily: "Arial, sans-serif",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: 20,
-          padding: 24,
-          border: "1px solid #d7e6d1",
-          boxShadow: "0 18px 45px rgba(23, 77, 43, 0.10)",
-          color: "#174d2b",
-          fontWeight: 700,
-        }}
-      >
-        Carregando confirmação da loja...
       </div>
     </main>
   );
@@ -302,7 +210,7 @@ function CriadoComSucessoFallback() {
 
 export default function CriadoComSucessoPage() {
   return (
-    <Suspense fallback={<CriadoComSucessoFallback />}>
+    <Suspense fallback={<div>Carregando...</div>}>
       <CriadoComSucessoConteudo />
     </Suspense>
   );

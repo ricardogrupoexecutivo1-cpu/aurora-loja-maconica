@@ -108,7 +108,9 @@ function ConfigurarLojaConteudo() {
         }
       }
 
-      setMensagem("Configuração inicial salva com sucesso.");
+      setMensagem(
+        "Configuração inicial salva com sucesso. Sua cortesia automática permanece ativa por até 90 dias."
+      );
     } catch (err) {
       const message =
         err instanceof Error
@@ -126,8 +128,8 @@ function ConfigurarLojaConteudo() {
       style={{
         minHeight: "100vh",
         background:
-          "linear-gradient(180deg, #f8fbf7 0%, #eef6eb 45%, #f4f8f2 100%)",
-        padding: "28px 16px 40px",
+          "radial-gradient(circle at top left, rgba(217,243,226,0.85), transparent 28%), radial-gradient(circle at bottom right, rgba(210,238,219,0.72), transparent 24%), linear-gradient(180deg, #f8fcf9 0%, #f1f8f4 52%, #edf6f1 100%)",
+        padding: "24px 12px 40px",
         fontFamily: "Arial, sans-serif",
         color: corTexto,
       }}
@@ -138,9 +140,9 @@ function ConfigurarLojaConteudo() {
             background:
               "linear-gradient(135deg, #174d2b 0%, #1f6b3b 60%, #2c8a4b 100%)",
             color: "#ffffff",
-            borderRadius: 28,
-            padding: "34px 24px",
-            boxShadow: "0 22px 50px rgba(23, 77, 43, 0.22)",
+            borderRadius: 30,
+            padding: "30px 22px",
+            boxShadow: "0 22px 60px rgba(23, 77, 43, 0.24)",
             border: "1px solid rgba(255,255,255,0.10)",
             marginBottom: 22,
           }}
@@ -165,9 +167,9 @@ function ConfigurarLojaConteudo() {
           <h1
             style={{
               margin: "0 0 12px",
-              fontSize: "clamp(28px, 4vw, 42px)",
-              lineHeight: 1.1,
-              fontWeight: 800,
+              fontSize: "clamp(30px, 4vw, 44px)",
+              lineHeight: 1.05,
+              fontWeight: 900,
             }}
           >
             Configurar minha loja
@@ -177,9 +179,9 @@ function ConfigurarLojaConteudo() {
             style={{
               margin: 0,
               fontSize: "clamp(15px, 2vw, 18px)",
-              lineHeight: 1.7,
+              lineHeight: 1.75,
               color: "rgba(255,255,255,0.92)",
-              maxWidth: 780,
+              maxWidth: 790,
             }}
           >
             Complete os dados institucionais da loja para organizar a base,
@@ -197,9 +199,9 @@ function ConfigurarLojaConteudo() {
           }}
         >
           {[
-            "Base inicial protegida",
+            "Cortesia automática ativa",
+            "Até 90 dias liberados",
             "Configuração segura",
-            "Pronta para irmãos autorizados",
             "Uso em celular e PC",
           ].map((item) => (
             <div
@@ -218,6 +220,112 @@ function ConfigurarLojaConteudo() {
               {item}
             </div>
           ))}
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 18,
+            marginBottom: 22,
+          }}
+        >
+          <div
+            style={{
+              background: corCard,
+              borderRadius: 24,
+              padding: 22,
+              border: `1px solid ${corBorda}`,
+              boxShadow: sombra,
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 10px",
+                fontSize: 22,
+                color: corVerdeEscuro,
+              }}
+            >
+              Entrada já liberada
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                color: corTextoSuave,
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Sua loja já entrou com cortesia ativa. Agora esta etapa serve para
+              completar a base institucional e deixar o ambiente pronto para uso
+              organizado e elegante.
+            </p>
+          </div>
+
+          <div
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(245,250,243,1) 100%)",
+              borderRadius: 24,
+              padding: 22,
+              border: `2px solid ${corDourado}`,
+              boxShadow: "0 22px 55px rgba(176, 141, 87, 0.12)",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 10px",
+                fontSize: 22,
+                color: corVerdeEscuro,
+              }}
+            >
+              Cortesia por até 90 dias
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                color: corTextoSuave,
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              O sistema foi desenhado para não travar a entrada. A loja se
+              cadastra, recebe a liberação automática inicial e segue para a
+              configuração com segurança.
+            </p>
+          </div>
+
+          <div
+            style={{
+              background: corCard,
+              borderRadius: 24,
+              padding: 22,
+              border: `1px solid ${corBorda}`,
+              boxShadow: sombra,
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 10px",
+                fontSize: 22,
+                color: corVerdeEscuro,
+              }}
+            >
+              Base premium
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                color: corTextoSuave,
+                lineHeight: 1.8,
+                fontSize: 15,
+              }}
+            >
+              Esta etapa prepara a loja para um ambiente bonito, organizado e
+              pronto para encantar os irmãos com experiência institucional séria
+              e elegante.
+            </p>
+          </div>
         </section>
 
         <section
@@ -244,7 +352,7 @@ function ConfigurarLojaConteudo() {
               <h2
                 style={{
                   margin: "0 0 8px",
-                  fontSize: 26,
+                  fontSize: 28,
                   color: corVerdeEscuro,
                 }}
               >
@@ -254,7 +362,7 @@ function ConfigurarLojaConteudo() {
                 style={{
                   margin: 0,
                   color: corTextoSuave,
-                  lineHeight: 1.7,
+                  lineHeight: 1.75,
                   fontSize: 15,
                 }}
               >
@@ -297,7 +405,7 @@ function ConfigurarLojaConteudo() {
                 type="text"
                 value={form.id}
                 onChange={(e) => atualizarCampo("id", e.target.value)}
-                placeholder="UUID da loja criada no pagamento"
+                placeholder="UUID da loja"
                 style={{
                   height: 48,
                   borderRadius: 14,
@@ -556,6 +664,7 @@ function ConfigurarLojaConteudo() {
                 padding: "14px 16px",
                 color: corVerdeEscuro,
                 fontWeight: 700,
+                lineHeight: 1.7,
               }}
             >
               {mensagem}
@@ -572,114 +681,12 @@ function ConfigurarLojaConteudo() {
                 padding: "14px 16px",
                 color: "#8a1f1f",
                 fontWeight: 700,
+                lineHeight: 1.7,
               }}
             >
               {erro}
             </div>
           ) : null}
-        </section>
-
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 18,
-          }}
-        >
-          <div
-            style={{
-              background: corCard,
-              borderRadius: 24,
-              padding: 22,
-              border: `1px solid ${corBorda}`,
-              boxShadow: sombra,
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 12px",
-                fontSize: 22,
-                color: corVerdeEscuro,
-              }}
-            >
-              O que virá depois
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                color: corTextoSuave,
-                lineHeight: 1.8,
-                fontSize: 15,
-              }}
-            >
-              Após essa base inicial, a loja poderá organizar irmãos, agenda,
-              memorial, documentos e estrutura interna conforme o plano ativo.
-            </p>
-          </div>
-
-          <div
-            style={{
-              background: corCard,
-              borderRadius: 24,
-              padding: 22,
-              border: `1px solid ${corBorda}`,
-              boxShadow: sombra,
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 12px",
-                fontSize: 22,
-                color: corVerdeEscuro,
-              }}
-            >
-              Segurança institucional
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                color: corTextoSuave,
-                lineHeight: 1.8,
-                fontSize: 15,
-              }}
-            >
-              Dados públicos só devem ser liberados depois da conferência e da
-              confirmação da própria loja, preservando sigilo e organização.
-            </p>
-          </div>
-
-          <div
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(245,250,243,1) 100%)",
-              borderRadius: 24,
-              padding: 22,
-              border: `2px solid ${corDourado}`,
-              boxShadow: "0 22px 55px rgba(176, 141, 87, 0.12)",
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 12px",
-                fontSize: 22,
-                color: corVerdeEscuro,
-              }}
-            >
-              Padrão premium
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                color: corTextoSuave,
-                lineHeight: 1.8,
-                fontSize: 15,
-              }}
-            >
-              Esta etapa prepara a loja para um ambiente bonito, organizado e
-              pronto para encantar os irmãos com uma experiência institucional
-              séria e elegante.
-            </p>
-          </div>
         </section>
 
         <div

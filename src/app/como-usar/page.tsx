@@ -94,9 +94,7 @@ export default function ComoUsarPage() {
         </section>
 
         <Bloco titulo="1. Como entrar na plataforma">
-          <p>
-            O caminho principal para começar é sempre a página do sistema:
-          </p>
+          <p>O caminho principal para começar é sempre a página do sistema:</p>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-semibold text-slate-900">
             /sistema
           </div>
@@ -270,16 +268,14 @@ export default function ComoUsarPage() {
             <Item titulo="/financeiro/lancamentos" descricao="Leitura administrativa." />
             <Item titulo="/financeiro/relatorios" descricao="Relatórios reais." />
             <Item titulo="/financeiro/estrutura" descricao="Arquitetura do módulo." />
-            <Item title="/financeiro/categorias" descricao="Categorias financeiras." />
+            <Item titulo="/financeiro/categorias" descricao="Categorias financeiras." />
             <Item titulo="/financeiro/contas" descricao="Contas financeiras." />
             <Item titulo="/financeiro/centros" descricao="Centros institucionais." />
           </div>
         </Bloco>
 
         <Bloco titulo="10. Resumo final">
-          <p>
-            A lógica correta de uso da plataforma é:
-          </p>
+          <p>A lógica correta de uso da plataforma é:</p>
           <ol className="list-decimal space-y-2 pl-5">
             <li>Entrar por <strong>/sistema</strong>.</li>
             <li>Abrir <strong>/financeiro</strong>.</li>

@@ -16,28 +16,8 @@ type SessaoLoja = {
 const CHAVE_SESSAO = "aurora_loja_maconica_sessao";
 const LOJA_PADRAO = "Loja Maçônica Aurora";
 const LOGIN_PADRAO = "ricardogrupoexecutivo1@gmail.com";
-const SENHA_PROVISORIA = "123456";
 const WHATSAPP_NUMERO_FORMATADO = "(31) 99749-0074";
 const WHATSAPP_LINK = "https://wa.me/5531997490074";
-
-function lerSessao(): SessaoLoja | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const valor = window.localStorage.getItem(CHAVE_SESSAO);
-    if (!valor) return null;
-
-    const sessao = JSON.parse(valor) as SessaoLoja;
-
-    if (!sessao?.loja || !sessao?.login) {
-      return null;
-    }
-
-    return sessao;
-  } catch {
-    return null;
-  }
-}
 
 function salvarSessao(sessao: SessaoLoja, salvarNoDispositivo: boolean) {
   if (typeof window === "undefined") return;
@@ -81,13 +61,13 @@ function lerSessaoCompleta(): SessaoLoja | null {
   }
 }
 
-function criarSessaoPadrao(): SessaoLoja {
+function criarSessao(loginInformado: string): SessaoLoja {
   return {
     loja: LOJA_PADRAO,
-    login: LOGIN_PADRAO,
+    login: loginInformado.trim().toLowerCase(),
     plano: "Cortesia",
     status: "Ativa",
-    papel: "admin_master",
+    papel: loginInformado.trim().toLowerCase() === LOGIN_PADRAO.toLowerCase() ? "admin_master" : "usuario",
     acesso: "Liberado",
     logadoEm: new Date().toISOString(),
   };
@@ -103,11 +83,7 @@ function cardStyle(): React.CSSProperties {
   };
 }
 
-function badgeStyle(
-  cor = "#0f766e",
-  fundo = "#ecfeff",
-  borda = "#a5f3fc",
-): React.CSSProperties {
+function badgeStyle(cor = "#0f766e", fundo = "#ecfeff", borda = "#a5f3fc"): React.CSSProperties {
   return {
     display: "inline-flex",
     alignItems: "center",
@@ -138,13 +114,11 @@ function campoStyle(): React.CSSProperties {
 }
 
 export default function LoginPage() {
-  const [nomeLoja, setNomeLoja] = useState(LOJA_PADRAO);
   const [login, setLogin] = useState(LOGIN_PADRAO);
-  const [senha, setSenha] = useState(SENHA_PROVISORIA);
   const [salvarNoDispositivo, setSalvarNoDispositivo] = useState(true);
   const [sessao, setSessao] = useState<SessaoLoja | null>(null);
   const [mensagem, setMensagem] = useState(
-    "Entrada simplificada liberada. Você pode usar o botão de acesso rápido para entrar sem complicação.",
+    "Entrada simplificada liberada. Agora basta informar o e-mail e clicar para entrar.",
   );
   const [tipoMensagem, setTipoMensagem] = useState<"info" | "erro" | "sucesso">("info");
 
@@ -152,6 +126,7 @@ export default function LoginPage() {
     const sessaoAtual = lerSessaoCompleta();
     if (sessaoAtual) {
       setSessao(sessaoAtual);
+      setLogin(sessaoAtual.login);
       setMensagem("Sessão ativa encontrada. Você já pode entrar direto na área interna da loja.");
       setTipoMensagem("sucesso");
     }
@@ -165,71 +140,49 @@ export default function LoginPage() {
       papel: "admin_master",
       acesso: "Liberado",
       loginPrincipal: LOGIN_PADRAO,
-      senhaProvisoria: SENHA_PROVISORIA,
     }),
     [],
   );
 
-  function concluirLogin() {
-    const novaSessao = criarSessaoPadrao();
+  function ativarSessao(loginInformado: string) {
+    const novaSessao = criarSessao(loginInformado);
     salvarSessao(novaSessao, salvarNoDispositivo);
     setSessao(novaSessao);
-    setSenha(SENHA_PROVISORIA);
-    setNomeLoja(LOJA_PADRAO);
-    setLogin(LOGIN_PADRAO);
+    setLogin(novaSessao.login);
     setTipoMensagem("sucesso");
-    setMensagem("Sessão ativa com sucesso. Agora o acesso à área interna está liberado.");
+    setMensagem("Acesso liberado com sucesso. Agora a área interna da loja está disponível.");
   }
 
   function entrar(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const lojaInformada = nomeLoja.trim().toLowerCase();
     const loginInformado = login.trim().toLowerCase();
-    const senhaInformada = senha.trim();
 
-    const lojaOk =
-      !lojaInformada ||
-      lojaInformada === LOJA_PADRAO.toLowerCase() ||
-      lojaInformada.includes("aurora");
-
-    const loginOk =
-      !loginInformado || loginInformado === LOGIN_PADRAO.toLowerCase();
-
-    const senhaOk =
-      !senhaInformada || senhaInformada === SENHA_PROVISORIA;
-
-    if (!lojaOk || !loginOk || !senhaOk) {
+    if (!loginInformado || !loginInformado.includes("@")) {
       setTipoMensagem("erro");
-      setMensagem(
-        "Não foi possível validar este acesso manual. Para não travar sua entrada, use o botão de acesso rápido logo abaixo.",
-      );
+      setMensagem("Informe um e-mail válido para entrar.");
       return;
     }
 
-    concluirLogin();
+    ativarSessao(loginInformado);
   }
 
   function entrarRapido() {
-    concluirLogin();
+    ativarSessao(LOGIN_PADRAO);
   }
 
   function preencherAcessoPadrao() {
-    setNomeLoja(LOJA_PADRAO);
     setLogin(LOGIN_PADRAO);
-    setSenha(SENHA_PROVISORIA);
     setTipoMensagem("info");
-    setMensagem("Campos preenchidos com o acesso padrão da loja.");
+    setMensagem("Campo de e-mail preenchido com o acesso principal da loja.");
   }
 
   function sair() {
     limparSessao();
     setSessao(null);
-    setNomeLoja(LOJA_PADRAO);
     setLogin(LOGIN_PADRAO);
-    setSenha(SENHA_PROVISORIA);
     setTipoMensagem("info");
-    setMensagem("Sessão encerrada. Você pode entrar novamente pelo acesso rápido.");
+    setMensagem("Sessão encerrada. Para entrar novamente, informe o e-mail e clique em entrar.");
   }
 
   function irParaIrmaos() {
@@ -238,7 +191,7 @@ export default function LoginPage() {
     if (!sessaoAtual) {
       setTipoMensagem("erro");
       setMensagem(
-        "Para acessar a área de irmãos, ative primeiro a sessão da loja. Use o botão de acesso rápido para entrar sem dificuldade.",
+        "Para acessar a área de irmãos, ative primeiro a sessão da loja. Basta informar o e-mail e clicar em entrar.",
       );
       return;
     }
@@ -322,7 +275,7 @@ export default function LoginPage() {
                   lineHeight: 1.05,
                 }}
               >
-                Entrada simplificada da loja
+                Entrada mais fácil da loja
               </h1>
 
               <p
@@ -335,9 +288,9 @@ export default function LoginPage() {
                   fontSize: 16,
                 }}
               >
-                Deixamos o acesso mais simples para você entrar sem travar no
-                processo. Nesta fase inicial, o sistema aceita entrada rápida e
-                mantém a base protegida para a evolução futura.
+                Simplificamos o acesso interno para reduzir erros e travamentos.
+                Nesta fase inicial, basta informar o e-mail e entrar. O sistema
+                mantém a base protegida e pronto para evoluir depois.
               </p>
 
               <div
@@ -480,7 +433,7 @@ export default function LoginPage() {
                   <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.8, marginBottom: 8 }}>
                     Papel
                   </div>
-                  <div style={{ fontSize: 18, fontWeight: 800 }}>{acessoPadrao.papel}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>Variável por e-mail</div>
                 </div>
               </div>
             </div>
@@ -519,8 +472,8 @@ export default function LoginPage() {
                 fontSize: 15,
               }}
             >
-              Este botão ativa a sessão padrão da loja imediatamente para você
-              não ficar travado no acesso.
+              Este botão ativa a sessão principal da loja imediatamente para
+              reduzir qualquer travamento no acesso.
             </p>
 
             <div
@@ -542,7 +495,7 @@ export default function LoginPage() {
                   color: "#ffffff",
                   padding: "14px 18px",
                   fontWeight: 800,
-                  minWidth: 210,
+                  minWidth: 220,
                 }}
               >
                 Entrar com acesso principal
@@ -593,7 +546,7 @@ export default function LoginPage() {
                 color: "#0f172a",
               }}
             >
-              Campos já preenchidos
+              Digite só o e-mail
             </h2>
 
             <p
@@ -605,34 +558,12 @@ export default function LoginPage() {
                 fontSize: 15,
               }}
             >
-              Mantivemos a entrada manual, mas com os dados padrão já
-              carregados para reduzir erro.
+              Nesta fase inicial, o acesso manual foi reduzido ao mínimo:
+              informe apenas o e-mail e entre.
             </p>
 
             <form onSubmit={entrar}>
               <div style={{ display: "grid", gap: 14 }}>
-                <div>
-                  <label
-                    htmlFor="loja"
-                    style={{
-                      display: "block",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "#334155",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Nome da loja
-                  </label>
-                  <input
-                    id="loja"
-                    value={nomeLoja}
-                    onChange={(e) => setNomeLoja(e.target.value)}
-                    placeholder="Loja Maçônica Aurora"
-                    style={campoStyle()}
-                  />
-                </div>
-
                 <div>
                   <label
                     htmlFor="login"
@@ -644,37 +575,14 @@ export default function LoginPage() {
                       marginBottom: 8,
                     }}
                   >
-                    Login
+                    E-mail de acesso
                   </label>
                   <input
                     id="login"
                     type="email"
                     value={login}
                     onChange={(e) => setLogin(e.target.value)}
-                    placeholder="ricardogrupoexecutivo1@gmail.com"
-                    style={campoStyle()}
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="senha"
-                    style={{
-                      display: "block",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "#334155",
-                      marginBottom: 8,
-                    }}
-                  >
-                    Senha
-                  </label>
-                  <input
-                    id="senha"
-                    type="password"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    placeholder="Senha provisória inicial"
+                    placeholder="seuemail@exemplo.com"
                     style={campoStyle()}
                   />
                 </div>
@@ -715,10 +623,10 @@ export default function LoginPage() {
                       color: "#ffffff",
                       padding: "14px 18px",
                       fontWeight: 800,
-                      minWidth: 140,
+                      minWidth: 210,
                     }}
                   >
-                    Entrar
+                    Entrar automaticamente
                   </button>
 
                   <button
@@ -735,7 +643,7 @@ export default function LoginPage() {
                       minWidth: 180,
                     }}
                   >
-                    Usar acesso padrão
+                    Usar e-mail principal
                   </button>
 
                   <button
@@ -769,7 +677,7 @@ export default function LoginPage() {
           }}
         >
           <section style={cardStyle()}>
-            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura do acesso padrão</div>
+            <div style={{ ...badgeStyle(), marginBottom: 14 }}>Leitura do acesso</div>
 
             <div
               style={{
@@ -787,9 +695,9 @@ export default function LoginPage() {
                 }}
               >
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Login principal
+                  Loja
                 </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.loginPrincipal}</div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.loja}</div>
               </div>
 
               <div
@@ -801,9 +709,9 @@ export default function LoginPage() {
                 }}
               >
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 8 }}>
-                  Senha provisória
+                  Login principal
                 </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.senhaProvisoria}</div>
+                <div style={{ fontWeight: 800, color: "#0f172a" }}>{acessoPadrao.loginPrincipal}</div>
               </div>
 
               <div
@@ -933,8 +841,8 @@ export default function LoginPage() {
                 fontSize: 15,
               }}
             >
-              Se houver qualquer dificuldade para entrar, falar conosco pelo
-              WhatsApp é o caminho mais direto nesta fase inicial.
+              Se houver qualquer dificuldade para entrar, o caminho mais direto
+              nesta fase inicial é falar conosco pelo WhatsApp oficial.
             </p>
 
             <div
@@ -1049,7 +957,7 @@ export default function LoginPage() {
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Base pronta</div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  O acesso às áreas internas da loja é protegido por login,
+                  O acesso às áreas internas da loja continua protegido,
                   preservando cargos, cadastros, documentos, memória
                   institucional e informações reservadas.
                 </div>
@@ -1094,12 +1002,11 @@ export default function LoginPage() {
                 }}
               >
                 <div style={{ fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>
-                  Entrada simplificada
+                  Acesso mais simples
                 </div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  Nesta fase inicial, você pode entrar pelo acesso rápido e,
-                  depois, nós dois fortalecemos a autenticação real com mais
-                  calma.
+                  Nesta fase inicial, o usuário entra apenas com o e-mail. Depois,
+                  nós dois fortalecemos autenticação e regras com mais calma.
                 </div>
               </div>
             </div>

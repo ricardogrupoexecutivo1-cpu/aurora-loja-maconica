@@ -1,0 +1,51 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+type LancamentoFinanceiro = {
+  id: string;
+  createdAt: string;
+  tipo?: string;
+  status?: string;
+  descricao?: string;
+  categoria?: string;
+  conta?: string;
+  centro?: string;
+  competencia?: string;
+  valor?: number;
+  observacao?: string;
+};
+
+type ApiResponse = {
+  success: boolean;
+  total: number;
+  items: LancamentoFinanceiro[];
+  message?: string;
+};
+
+function formatarMoeda(valor?: number) {
+  const numero = typeof valor === "number" && Number.isFinite(valor) ? valor : 0;
+
+  return numero.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatarData(dataIso?: string) {
+  if (!dataIso) {
+    return "—";
+  }
+
+  const data = new Date(dataIso);
+
+  if (Number.isNaN(data.getTime())) {
+    return "—";
+  }
+
+  return data.toLocaleString("pt-BR");
+}
+
+function badgeTipoClasses(tipo?: string) {
+  if (tipo === "Entrada") {

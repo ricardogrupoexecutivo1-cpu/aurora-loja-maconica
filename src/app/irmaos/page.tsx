@@ -148,6 +148,20 @@ export default function IrmaosPage() {
   const areas = useMemo(
     () => [
       {
+        badge: "Sistema",
+        titulo: "Painel geral do sistema",
+        descricao:
+          "Página central de direcionamento com botões para todos os campos da plataforma, organizada para facilitar a navegação interna.",
+        href: "/sistema",
+      },
+      {
+        badge: "Lista",
+        titulo: "Relação dos irmãos",
+        descricao:
+          "Leitura fácil com nome, cargo, loja, grau e função, pronta para baixar, imprimir e ampliar com mandato, potência e nome da chapa.",
+        href: "/irmaos/lista",
+      },
+      {
         badge: "Família",
         titulo: "Família e base social",
         descricao:
@@ -335,8 +349,8 @@ export default function IrmaosPage() {
                 }}
               >
                 Acesso reservado para leitura institucional, base familiar,
-                histórico, documentos, agenda e expansão da estrutura interna da
-                loja com segurança.
+                histórico, documentos, agenda, relação dos irmãos e expansão da
+                estrutura interna da loja com segurança.
               </p>
 
               <div

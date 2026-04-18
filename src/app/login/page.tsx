@@ -127,7 +127,7 @@ export default function LoginPage() {
     if (sessaoAtual) {
       setSessao(sessaoAtual);
       setLogin(sessaoAtual.login);
-      setMensagem("Sessão ativa encontrada. Você já pode entrar direto na área interna da loja.");
+      setMensagem("Sessão ativa encontrada. Você já pode entrar direto no painel geral do sistema.");
       setTipoMensagem("sucesso");
     }
   }, []);
@@ -150,7 +150,7 @@ export default function LoginPage() {
     setSessao(novaSessao);
     setLogin(novaSessao.login);
     setTipoMensagem("sucesso");
-    setMensagem("Acesso liberado com sucesso. Agora a área interna da loja está disponível.");
+    setMensagem("Acesso liberado com sucesso. Agora o painel geral do sistema está disponível.");
   }
 
   function entrar(event: React.FormEvent<HTMLFormElement>) {
@@ -165,10 +165,12 @@ export default function LoginPage() {
     }
 
     ativarSessao(loginInformado);
+    window.location.href = "/sistema";
   }
 
   function entrarRapido() {
     ativarSessao(LOGIN_PADRAO);
+    window.location.href = "/sistema";
   }
 
   function preencherAcessoPadrao() {
@@ -185,18 +187,18 @@ export default function LoginPage() {
     setMensagem("Sessão encerrada. Para entrar novamente, informe o e-mail e clique em entrar.");
   }
 
-  function irParaIrmaos() {
+  function irParaSistema() {
     const sessaoAtual = lerSessaoCompleta();
 
     if (!sessaoAtual) {
       setTipoMensagem("erro");
       setMensagem(
-        "Para acessar a área de irmãos, ative primeiro a sessão da loja. Basta informar o e-mail e clicar em entrar.",
+        "Para acessar o painel geral do sistema, ative primeiro a sessão da loja. Basta informar o e-mail e clicar em entrar.",
       );
       return;
     }
 
-    window.location.href = "/irmaos";
+    window.location.href = "/sistema";
   }
 
   const corMensagem =
@@ -289,8 +291,8 @@ export default function LoginPage() {
                 }}
               >
                 Simplificamos o acesso interno para reduzir erros e travamentos.
-                Nesta fase inicial, basta informar o e-mail e entrar. O sistema
-                mantém a base protegida e pronto para evoluir depois.
+                Nesta fase inicial, basta informar o e-mail e entrar. Depois do
+                login, o sistema já leva ao painel geral de direcionamento.
               </p>
 
               <div
@@ -334,7 +336,7 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={irParaIrmaos}
+                  onClick={irParaSistema}
                   style={{
                     cursor: "pointer",
                     background: "rgba(255,255,255,0.10)",
@@ -345,7 +347,7 @@ export default function LoginPage() {
                     border: "1px solid rgba(255,255,255,0.18)",
                   }}
                 >
-                  Ir para irmãos
+                  Ir para o sistema
                 </button>
               </div>
             </div>
@@ -472,8 +474,8 @@ export default function LoginPage() {
                 fontSize: 15,
               }}
             >
-              Este botão ativa a sessão principal da loja imediatamente para
-              reduzir qualquer travamento no acesso.
+              Este botão ativa a sessão principal da loja imediatamente e já
+              leva o usuário para o painel geral do sistema.
             </p>
 
             <div
@@ -503,7 +505,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={irParaIrmaos}
+                onClick={irParaSistema}
                 style={{
                   cursor: "pointer",
                   borderRadius: 16,
@@ -512,10 +514,10 @@ export default function LoginPage() {
                   border: "1px solid #cbd5e1",
                   padding: "14px 18px",
                   fontWeight: 800,
-                  minWidth: 180,
+                  minWidth: 190,
                 }}
               >
-                Abrir área dos irmãos
+                Abrir o sistema
               </button>
             </div>
 
@@ -1005,8 +1007,9 @@ export default function LoginPage() {
                   Acesso mais simples
                 </div>
                 <div style={{ color: "#475569", lineHeight: 1.8 }}>
-                  Nesta fase inicial, o usuário entra apenas com o e-mail. Depois,
-                  nós dois fortalecemos autenticação e regras com mais calma.
+                  Nesta fase inicial, o usuário entra apenas com o e-mail e já
+                  segue para o painel geral do sistema. Depois, nós dois
+                  fortalecemos autenticação e regras com mais calma.
                 </div>
               </div>
             </div>

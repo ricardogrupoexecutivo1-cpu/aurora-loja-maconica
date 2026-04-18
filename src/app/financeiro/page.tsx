@@ -1,199 +1,280 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { protegerPagina } from "@/lib/auth-guard";
 
-type Lancamento = {
-  id: string;
+type CardResumoProps = {
   titulo: string;
-  tipo: "entrada" | "saida";
-  valor: number;
-  categoria: string;
-  conta: string;
-  centroCusto: string;
-  competencia: string;
-  status: "pago" | "pendente" | "cancelado";
-  descricao?: string;
+  valor: string;
+  descricao: string;
 };
 
-const DADOS_INICIAIS: Lancamento[] = [
+type AtalhoProps = {
+  titulo: string;
+  descricao: string;
+  href: string;
+  cta: string;
+};
+
+const atalhosPrincipais: AtalhoProps[] = [
   {
-    id: "1",
-    titulo: "Mensalidade institucional",
-    tipo: "entrada",
-    valor: 210,
-    categoria: "Mensalidade",
-    conta: "Caixa Institucional",
-    centroCusto: "Administrativo",
-    competencia: "2026-04",
-    status: "pago",
-    descricao: "Base inicial de leitura institucional.",
+    titulo: "Estrutura do módulo",
+    descricao:
+      "Entenda a arquitetura oficial da nova camada premium com categorias, contas e centros institucionais.",
+    href: "/financeiro/estrutura",
+    cta: "Abrir estrutura",
+  },
+  {
+    titulo: "Novo lançamento",
+    descricao:
+      "Acesse o formulário isolado já alinhado com categoria, conta e centro institucional.",
+    href: "/financeiro/novo",
+    cta: "Abrir lançamento",
+  },
+  {
+    titulo: "Relatórios",
+    descricao:
+      "Veja a leitura por competência e a base real dos relatórios institucionais.",
+    href: "/financeiro/relatorios",
+    cta: "Abrir relatórios",
+  },
+  {
+    titulo: "Lançamentos salvos",
+    descricao:
+      "Consulte a leitura administrativa dos lançamentos já gravados no Supabase da camada premium.",
+    href: "/financeiro/lancamentos",
+    cta: "Ver lançamentos",
   },
 ];
 
-function moeda(valor: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(valor);
+const atalhosEstruturais: AtalhoProps[] = [
+  {
+    titulo: "Categorias financeiras",
+    descricao:
+      "Organização das entradas, saídas e ajustes da nova camada financeira institucional.",
+    href: "/financeiro/categorias",
+    cta: "Ver categorias",
+  },
+  {
+    titulo: "Contas financeiras",
+    descricao:
+      "Leitura de caixa, banco principal, reserva institucional e Tronco de Solidariedade.",
+    href: "/financeiro/contas",
+    cta: "Ver contas",
+  },
+  {
+    titulo: "Centros institucionais",
+    descricao:
+      "Separação administrativa por finalidade para relatórios e comparativos mais inteligentes.",
+    href: "/financeiro/centros",
+    cta: "Ver centros",
+  },
+];
+
+function CardResumo({ titulo, valor, descricao }: CardResumoProps) {
+  return (
+    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{titulo}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{valor}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{descricao}</p>
+    </div>
+  );
+}
+
+function CardAtalho({ titulo, descricao, href, cta }: AtalhoProps) {
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <h3 className="text-lg font-semibold text-slate-900 sm:text-xl">{titulo}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">{descricao}</p>
+
+      <div className="mt-5">
+        <Link
+          href={href}
+          className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          {cta}
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default function FinanceiroPage() {
-  const [lancamentos] = useState<Lancamento[]>(DADOS_INICIAIS);
-
-  useEffect(() => {
-    protegerPagina();
-  }, []);
-
-  const entradas = useMemo(
-    () =>
-      lancamentos
-        .filter((item) => item.tipo === "entrada" && item.status !== "cancelado")
-        .reduce((acc, item) => acc + item.valor, 0),
-    [lancamentos],
-  );
-
-  const saidas = useMemo(
-    () =>
-      lancamentos
-        .filter((item) => item.tipo === "saida" && item.status !== "cancelado")
-        .reduce((acc, item) => acc + item.valor, 0),
-    [lancamentos],
-  );
-
-  const saldo = entradas - saidas;
-
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.10),_transparent_28%),linear-gradient(to_bottom,_#f8fafc,_#ffffff,_#f0fdf4)] text-slate-900">
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-[2rem] border border-emerald-100/80 bg-white shadow-[0_24px_70px_-34px_rgba(22,163,74,0.22)]">
-          <div className="border-b border-emerald-100 bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-900 px-6 py-7 text-white">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-4xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-sky-50/40 text-slate-900">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-sky-900 px-5 py-8 text-white sm:px-8 sm:py-10">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
                   Aurora Loja Maçônica
-                </p>
-                <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                </span>
+
+                <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
                   Financeiro institucional
                 </h1>
-                <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200 sm:text-base">
-                  Área financeira protegida para controle institucional,
-                  lançamentos, leitura de saldo e organização administrativa com
-                  padrão verde premium.
+
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+                  Leitura financeira clara, elegante e protegida para a loja. Esta área reúne a
+                  base oficial da nova camada premium, criada em páginas isoladas e agora já
+                  conectada ao Supabase real com segurança.
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/irmaos"
-                  className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/20"
+                  href="/sistema"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                 >
-                  Voltar à área interna
+                  Voltar ao sistema
                 </Link>
+
                 <Link
-                  href="/relatorios"
-                  className="rounded-2xl border border-emerald-300/30 bg-emerald-400/15 px-4 py-3 text-center text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/25"
+                  href="/financeiro/novo"
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
                 >
-                  Relatórios
+                  Novo lançamento
                 </Link>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 bg-gradient-to-b from-white to-slate-50/70 px-6 py-6 lg:grid-cols-3">
-            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Entradas
-              </p>
-              <h2 className="mt-3 text-lg font-bold text-slate-900">
-                {moeda(entradas)}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Soma das entradas válidas da base financeira.
-              </p>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Saídas
-              </p>
-              <h2 className="mt-3 text-lg font-bold text-slate-900">
-                {moeda(saidas)}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Soma das saídas válidas da base financeira.
-              </p>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-emerald-100 bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Saldo
-              </p>
-              <h2 className="mt-3 text-lg font-bold text-slate-900">
-                {moeda(saldo)}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Leitura consolidada da situação institucional atual.
-              </p>
-            </div>
+          <div className="grid gap-4 border-t border-slate-200 bg-white px-5 py-5 sm:grid-cols-2 xl:grid-cols-4 sm:px-8">
+            <CardResumo
+              titulo="Base"
+              valor="Real"
+              descricao="A nova camada premium já grava e lê no Supabase com segurança."
+            />
+            <CardResumo
+              titulo="Estrutura"
+              valor="Completa"
+              descricao="Categorias, contas, centros, lançamentos e relatórios já conectados."
+            />
+            <CardResumo
+              titulo="Blindagem"
+              valor="Mantida"
+              descricao="Tudo foi criado em páginas novas para não mexer no que já estava estável."
+            />
+            <CardResumo
+              titulo="Próxima fase"
+              valor="Fechamento"
+              descricao="Base pronta para evolução de competência, filtros e relatórios avançados."
+            />
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-[1.75rem] border border-emerald-100 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
-                Base financeira protegida
-              </p>
-              <h2 className="mt-2 text-xl font-bold text-slate-900">
-                Lançamentos institucionais
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Esta área permanece protegida e preparada para crescer sem
-                quebrar o padrão institucional já publicado.
-              </p>
-            </div>
-          </div>
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              Mapa oficial do módulo
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+              Como já existe uma base financeira anterior no projeto, esta área continua sendo o
+              ponto oficial para entender e operar a nova camada premium que nós dois construímos
+              com blindagem, estabilidade e persistência real.
+            </p>
 
-          <div className="mt-6 grid gap-4">
-            {lancamentos.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4"
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-base font-bold text-slate-900">
-                      {item.titulo}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {item.categoria} • {item.conta} • {item.centroCusto}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      Competência: {item.competencia} • Status: {item.status}
-                    </p>
-                    {item.descricao ? (
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {item.descricao}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900">
-                    {moeda(item.valor)}
-                  </div>
-                </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">Leitura clara</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Estrutura visual premium para celular e computador, com foco em compreensão rápida.
+                </p>
               </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-900">Páginas isoladas</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Módulo criado sem alterar a base já estável, respeitando a regra permanente do projeto.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-800">Base real conectada</p>
+                <p className="mt-1 text-sm leading-6 text-emerald-700">
+                  Lançamentos, leitura administrativa e relatórios já estão conectados ao Supabase.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <p className="text-sm font-semibold text-sky-800">Diretriz institucional</p>
+                <p className="mt-1 text-sm leading-6 text-sky-700">
+                  Tronco de Solidariedade visível como entrada institucional e doações como saída própria.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
+              Base pronta para operar
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Sistema em constante atualização. A nova organização do financeiro institucional já
+              saiu da fase de simulação e entrou em base real, preservando a estabilidade do projeto.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-800">Entrada do Tronco</p>
+                <p className="mt-1 text-sm leading-6 text-emerald-700">
+                  A lógica do Tronco de Solidariedade já está pronta para uso como item financeiro institucional.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <p className="text-sm font-semibold text-sky-800">Leitura administrativa</p>
+                <p className="mt-1 text-sm leading-6 text-sky-700">
+                  Os lançamentos gravados já podem ser conferidos em tela própria de leitura operacional.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-800">Próxima evolução</p>
+                <p className="mt-1 text-sm leading-6 text-amber-700">
+                  Fechamento por competência, filtros avançados e refinamento visual final.
+                </p>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              Acessos principais da nova camada
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+              Estes são os caminhos principais do módulo financeiro premium já organizados para navegação segura.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            {atalhosPrincipais.map((atalho) => (
+              <CardAtalho key={atalho.href} {...atalho} />
             ))}
           </div>
-        </div>
+        </section>
 
-        <footer className="rounded-[1.75rem] border border-slate-100 bg-white px-6 py-5 text-sm leading-6 text-slate-600 shadow-sm">
-          Sistema em constante atualização. O financeiro institucional permanece
-          protegido e pode evoluir depois sem comprometer a base existente.
-        </footer>
-      </section>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              Estrutura administrativa
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">
+              A base estrutural da nova camada já está separada entre categorias, contas e centros institucionais.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {atalhosEstruturais.map((atalho) => (
+              <CardAtalho key={atalho.href} {...atalho} />
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+          Sistema em constante atualização. Podem ocorrer instabilidades momentâneas durante melhorias.
+        </section>
+      </div>
     </main>
   );
 }

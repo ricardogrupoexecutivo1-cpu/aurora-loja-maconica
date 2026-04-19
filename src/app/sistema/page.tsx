@@ -16,6 +16,13 @@ const atalhosPrincipais: Atalho[] = [
     cta: "Abrir financeiro",
   },
   {
+    titulo: "Como usar a plataforma",
+    descricao:
+      "Tutorial completo da Aurora Loja Maçônica com passo a passo detalhado para qualquer usuário.",
+    href: "/como-usar",
+    cta: "Abrir tutorial",
+  },
+  {
     titulo: "Irmãos",
     descricao:
       "Área preparada para leitura institucional dos irmãos e evolução segura das funções internas.",
@@ -207,7 +214,7 @@ export default function SistemaPage() {
             </p>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
             {atalhosPrincipais.map((item) => (
               <CardAtalho key={item.href} {...item} />
             ))}
